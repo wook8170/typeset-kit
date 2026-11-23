@@ -1,0 +1,49 @@
+{
+  "name": "typeset-kit",
+  "version": "0.1.0",
+  "description": "Typeset Markdown, book specs and page HTML into PDFs with a table of contents, internal links and bookmarks, using a headless Chrome.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "typeset-kit": "bin/typeset-kit.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs",
+    "./config": "./src/config/index.mjs",
+    "./spec": "./src/spec/contract.mjs",
+    "./browser": "./src/browser/index.mjs",
+    "./paginator": "./src/render/paginator.mjs",
+    "./render": "./src/render/index.mjs",
+    "./theme": "./src/theme/index.mjs",
+    "./pdf-nav": "./src/pdf/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "src",
+    "rules",
+    "fonts",
+    "themes",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "scripts": {
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "keywords": [
+    "pdf",
+    "typesetting",
+    "markdown",
+    "bookmarks",
+    "table-of-contents",
+    "chrome",
+    "cdp",
+    "korean"
+  ],
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  }
+}
