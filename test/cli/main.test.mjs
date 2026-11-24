@@ -74,6 +74,7 @@ describe('init', () => {
     const again = await runIn(dir, ['init'])
     assert.equal(again.code, 1)
     assert.match(again.err, /docs\/guide\.md/)
+    assert.ok(!again.err.includes(dir) && !again.err.includes('\\'), '문구의 경로는 지금 폴더 기준 / 꼴이다')
     assert.equal(await readFile(join(dir, 'docs/guide.md'), 'utf8'), '# mine')
     assert.equal((await runIn(dir, ['init', '--locale', 'fr'])).code, 2)
     await removeTree(dir)

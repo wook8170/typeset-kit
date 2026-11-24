@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import { inlineAssets } from '../../src/modes/pages/assets.mjs'
 import { flattenTree, shiftTree, treeFromFaces, treeFromFlat } from '../../src/modes/pages/outline.mjs'
@@ -20,17 +20,20 @@ before(async () => {
 })
 after(() => rm(dir, { recursive: true, force: true }))
 
+/** 찾은 절대 경로를 기준 폴더에 대한 `/` 경로로 바꾼다. 파일 목록은 그 플랫폼의 경로로 돌아온다(Windows 는 `\\`). */
+const relativeOf = (file) => relative(dir, file).split(sep).join('/')
+
 describe('expandSources', () => {
   test('글롭은 이름순이고 하위 폴더는 ** 일 때만 들어간다', async () => {
     const shallow = await expandSources('a/*.html', dir)
-    assert.deepEqual(shallow.files.map((file) => file.slice(dir.length + 1)), ['a/01-a.html', 'a/02-b.html'])
+    assert.deepEqual(shallow.files.map((file) => relativeOf(file)), ['a/01-a.html', 'a/02-b.html'])
     const deep = await expandSources('a/**/*.html', dir)
-    assert.deepEqual(deep.files.map((file) => file.slice(dir.length + 1)), ['a/01-a.html', 'a/02-b.html', 'a/deep/03-c.html'])
+    assert.deepEqual(deep.files.map((file) => relativeOf(file)), ['a/01-a.html', 'a/02-b.html', 'a/deep/03-c.html'])
   })
 
   test('경로 목록은 적은 순서를 지키고 같은 파일은 한 번만 싣는다', async () => {
     const { files } = await expandSources(['single.html', 'a/01-a.html', 'a/*.html'], dir)
-    assert.deepEqual(files.map((file) => file.slice(dir.length + 1)), ['single.html', 'a/01-a.html', 'a/02-b.html'])
+    assert.deepEqual(files.map((file) => relativeOf(file)), ['single.html', 'a/01-a.html', 'a/02-b.html'])
   })
 
   test('일치하는 파일이 없는 항목은 missing 으로 알린다', async () => {

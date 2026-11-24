@@ -44,11 +44,18 @@ export function webSocketUrlFrom(activePortText) {
   return `ws://127.0.0.1:${port}${browserPath}`
 }
 
-async function readActivePort(profileDir) {
+/** 포트 파일을 아직 읽을 수 없다는 오류 코드. Windows 에서는 브라우저가 파일을 쓰는 동안 열면 잠김(EBUSY · EPERM · EACCES)으로 실패한다. */
+const NOT_READY_CODES = ['ENOENT', 'EBUSY', 'EPERM', 'EACCES']
+
+/**
+ * 프로필의 DevToolsActivePort 를 읽는다. 아직 없거나 브라우저가 쓰는 중이라 잠겨 있으면 빈 글을 돌려준다(호출 쪽이 다시 읽는다).
+ * read 는 테스트에서 파일 읽기 대신 넣는 함수다.
+ */
+export async function readActivePort(profileDir, read = readFile) {
   try {
-    return await readFile(join(profileDir, 'DevToolsActivePort'), 'utf8')
+    return await read(join(profileDir, 'DevToolsActivePort'), 'utf8')
   } catch (error) {
-    if (error.code === 'ENOENT') return ''
+    if (NOT_READY_CODES.includes(error.code)) return ''
     throw error
   }
 }

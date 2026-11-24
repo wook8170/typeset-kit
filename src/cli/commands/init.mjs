@@ -5,7 +5,7 @@ import { lstatSync } from 'node:fs'
 import { copyFile, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { isInsideRoot, isMissingFileError } from '../../platform.mjs'
+import { isInsideRoot, isMissingFileError, toPosixPath } from '../../platform.mjs'
 import { EXIT } from '../exit.mjs'
 
 export const options = { force: { type: 'boolean' }, locale: { type: 'string' } }
@@ -80,18 +80,20 @@ export async function run({ values }, io) {
   }
   const plan = await plannedFiles(io.cwd, locale)
   const targets = [plan.config, ...plan.examples.map((file) => file.to)]
+  // 문구의 경로는 지금 폴더 기준이고 어느 플랫폼에서든 `/` 로 나눈 꼴이다.
+  const shown = (files) => files.map((file) => toPosixPath(relative(io.cwd, file))).join(', ')
   const outside = targets.filter((file) => !isInsideRoot(io.cwd, dirname(file)))
   if (outside.length) {
-    io.err(io.messages.initOutside(outside.join(', ')))
+    io.err(io.messages.initOutside(shown(outside)))
     return EXIT.failed
   }
   const existing = targets.filter(isOccupied)
   if (existing.length && !values.force) {
-    io.err(io.messages.initExists(existing.join(', ')))
+    io.err(io.messages.initExists(shown(existing)))
     return EXIT.failed
   }
   await placeFile(plan.config, (target) => writeFile(target, initConfigSource(locale), { flag: 'wx' }))
   for (const file of plan.examples) await placeFile(file.to, (target) => copyFile(file.from, target))
-  io.out(io.messages.initCreated(targets.join(', ')))
+  io.out(io.messages.initCreated(shown(targets)))
   return EXIT.ok
 }

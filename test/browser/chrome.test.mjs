@@ -3,7 +3,7 @@
 // 먼저 읽을 파일: test/browser/chrome-cases.mjs(특성화 사례), src/browser/print.mjs.
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { chromeArgs, webSocketUrlFrom, withChrome } from '../../src/browser/chrome.mjs'
+import { chromeArgs, readActivePort, webSocketUrlFrom, withChrome } from '../../src/browser/chrome.mjs'
 import { INITIAL_WAIT_MS, openDocument, printPdf, WAIT_MARGIN_MS, waitDeadline, WRITE_CHUNK } from '../../src/browser/print.mjs'
 import { chromeCases, createFakeCdp } from './chrome-cases.mjs'
 
@@ -24,6 +24,16 @@ describe('DevToolsActivePort 읽기', () => {
     assert.equal(webSocketUrlFrom(''), null)
     assert.equal(webSocketUrlFrom('51234'), null)
     assert.equal(webSocketUrlFrom('x\n/devtools/browser/abc'), null)
+  })
+})
+
+describe('DevToolsActivePort 를 아직 읽을 수 없을 때', () => {
+  const failWith = (code) => () => Promise.reject(Object.assign(new Error(code), { code }))
+  test('없거나 브라우저가 쓰는 중이라 잠긴 파일은 빈 글로 보고 다시 읽게 한다', async () => {
+    for (const code of ['ENOENT', 'EBUSY', 'EPERM', 'EACCES']) assert.equal(await readActivePort('profile', failWith(code)), '', code)
+  })
+  test('그 밖의 오류는 그대로 던진다', async () => {
+    await assert.rejects(() => readActivePort('profile', failWith('EIO')), /EIO/)
   })
 })
 
