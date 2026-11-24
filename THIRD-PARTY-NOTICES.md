@@ -16,8 +16,13 @@ typeset-kit 의 코드는 MIT 라이선스(`LICENSE`)다. 아래 항목은 패�
 
 ## 의존
 
-| 패키지 | 버전 | 라이선스 |
-|---|---|---|
-| pdf-lib | 1.17.1 | MIT |
+패키지에 함께 들어가지 않고 설치할 때 npm 이 받는다. 저작권 표시는 설치본의 라이선스 파일에서 옮겼다.
 
-> **미확인**: T5 가 `marked` 를 넣으면 이 표에 더한다. `pdf-lib` 의 저작권 표시 문구는 배포 전에 설치본의 `LICENSE` 와 대조한다.
+| 패키지 | 버전 | 라이선스 | 저작권 표시 | 구분 |
+|---|---|---|---|---|
+| pdf-lib | 1.17.1 | MIT | Copyright (c) 2019 Andrew Dillon | 직접 의존 |
+| marked | 18.1.3 | MIT | Copyright (c) 2018+, MarkedJS · Copyright (c) 2011-2018, Christopher Jeffrey | 직접 의존 |
+| @pdf-lib/standard-fonts | 1.0.0 | MIT | Copyright (c) 2018 Andrew Dillon | pdf-lib 의 의존 |
+| @pdf-lib/upng | 1.0.1 | MIT | Copyright (c) 2017 Photopea | pdf-lib 의 의존 |
+| pako | 1.0.11 | MIT AND Zlib | Copyright (C) 2014-2017 by Vitaly Puzrin and Andrei Tuputcyn | pdf-lib 의 의존 |
+| tslib | 1.14.1 | 0BSD | Copyright (c) Microsoft Corporation | pdf-lib 의 의존 |

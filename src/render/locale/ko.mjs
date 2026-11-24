@@ -25,6 +25,8 @@ export default Object.freeze({
   contact: '문의처',
   tocEyebrow: 'CONTENTS',
   tocTitle: '목차',
+  // pages 모드가 앞에 붙이는 차례 면의 제목
+  pagesTocTitle: '차례',
   chapterSections: '이 장의 절',
   chapterSectionCount: (count) => `이 장의 절 ${count}개는 차례에서 볼 수 있다.`,
   callouts: { note: '참고', caution: '주의', warning: '경고' },

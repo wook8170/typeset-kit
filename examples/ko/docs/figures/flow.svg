@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 130" width="680" height="130" role="img" aria-label="원고에서 PDF 와 웹판까지의 흐름">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4b5361"/>
+    </marker>
+  </defs>
+  <rect x="20" y="30" width="180" height="70" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="110" y="72" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="18" fill="#1b1f27">Markdown 원고</text>
+  <rect x="250" y="30" width="180" height="70" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="340" y="72" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="18" fill="#1b1f27">조판</text>
+  <rect x="480" y="30" width="180" height="70" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="570" y="72" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="18" fill="#1b1f27">PDF · 웹판</text>
+  <line x1="200" y1="65" x2="246" y2="65" stroke="#4b5361" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="430" y1="65" x2="476" y2="65" stroke="#4b5361" stroke-width="2" marker-end="url(#arrow)"/>
+</svg>

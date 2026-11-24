@@ -33,6 +33,7 @@ const DEFAULT_DEPS = {
   builtinFonts: async () => (await importStage('fonts:builtin')).BUILTIN_FONTS,
   inlineImages: async (spec, options) => (await import('../input/images.mjs')).inlineSpecImages(spec, options),
   applyPdfNavBytes: async (bytes, options) => (await import('../pdf/index.mjs')).applyPdfNavBytes(bytes, options),
+  inspectPdf: async (bytes) => (await import('../pdf/index.mjs')).inspectPdf(bytes),
   renderWeb: async (spec, options) => (await import('../web/index.mjs')).renderWebHtml(spec, options),
 }
 
@@ -132,6 +133,7 @@ async function printDocument(job, html, deps) {
   const coverLabel = localeWords(settings.locale).coverLabel
   const nav = await deps.applyPdfNavBytes(printed.pdf, { pageLabels: planPageLabels(printed.meta.front, coverLabel), objectStreams: true })
   const bytes = Buffer.from(nav.bytes)
+  const info = await deps.inspectPdf(bytes)
   const problems = judgePrinted({ overflow: printed.meta.overflow, allowOverflow: job.allowOverflow, bytes: bytes.length, pdfMaxMb: settings.limits.pdfMaxMb })
   const file = `${document.out || document.id}.pdf`
   const isTooBig = problems.some((problem) => problem.startsWith('pdf-size'))
@@ -140,6 +142,7 @@ async function printDocument(job, html, deps) {
   return {
     files: { pdf: isTooBig ? null : relativeOut(job, file) },
     pages: printed.meta.pages, frontPages: printed.meta.front, overflow: printed.meta.overflow,
+    landscapePages: info.landscapePages, bookmarks: info.outline.length, links: info.links.filter((link) => !link.external).length,
     bytes: bytes.length, browser: (await browserVersion(session.cdp)).product, problems,
   }
 }
@@ -151,15 +154,17 @@ export async function buildSpec(job, sourceSpec, deps = {}) {
   const report = emptyReport(document)
   const specProblems = validateSpec(sourceSpec, { calloutKinds: [...DEFAULT_CALLOUT_KINDS, ...Object.keys(settings.theme.callouts)] })
   if (specProblems.length) throw new SpecError(document.src, specProblems)
-  let spec = assignAnchors(sourceSpec)
-  if (needsImageInlining(spec)) spec = await use.inlineImages(spec, { root, limits: settings.limits, cdp: job.session?.cdp ?? null })
+  const inlined = needsImageInlining(sourceSpec)
+    ? await use.inlineImages(assignAnchors(sourceSpec), { root, limits: settings.limits, cdp: job.session?.cdp ?? null })
+    : { spec: assignAnchors(sourceSpec), problems: [] }
+  const spec = inlined.spec
   const logo = await readLogo(root, settings.brand.logo)
-  const assetProblems = [...(logo.missing ? [logo.missing] : []), ...findSvgProblems(spec, logo.logoSvg)]
+  const assetProblems = [...inlined.problems, ...(logo.missing ? [logo.missing] : []), ...findSvgProblems(spec, logo.logoSvg)]
   if (assetProblems.length) return { ...report, problems: assetProblems }
 
   const families = fontFamilies(settings.theme.fonts, await use.builtinFonts())
   const theme = defineTheme({ hue: spec.hue ?? settings.theme.hue, callouts: settings.theme.callouts, families })
-  const fontCss = await use.fontCss(settings.theme.fonts, { root })
+  const fontCss = await use.fontCss([settings.theme.fonts.sans, settings.theme.fonts.mono], { root })
   const html = renderPrintHtml(spec, { settings, fontCss, logoSvg: logo.logoSvg, theme })
   const base = document.out || document.id
   const files = { ...report.files }

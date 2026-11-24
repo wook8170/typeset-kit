@@ -11,7 +11,19 @@ import { after, before, describe, test } from 'node:test'
 import { build } from '../../src/build/index.mjs'
 import { findBrowser } from '../../src/browser/find.mjs'
 import { checkPdfs } from '../../src/check/index.mjs'
+import { PDFDict, PDFDocument, PDFName } from 'pdf-lib'
 import { inspectPdf } from '../../src/pdf/inspect.mjs'
+
+/** PDF 의 쪽들이 쓰는 글꼴 이름(BaseFont). 부분 집합 접두(ABCDEF+)는 뗀다. */
+async function fontNames(bytes) {
+  const doc = await PDFDocument.load(bytes)
+  const names = new Set()
+  for (const page of doc.getPages()) {
+    const fonts = page.node.Resources()?.lookup(PDFName.of('Font'), PDFDict)
+    for (const [, ref] of fonts?.entries() ?? []) names.add(String(doc.context.lookup(ref, PDFDict).get(PDFName.of('BaseFont'))).replace(/^\/[A-Z]{6}\+/, ''))
+  }
+  return [...names].sort()
+}
 
 function locateBrowser() {
   try {
@@ -101,6 +113,16 @@ describe('pages 모드', { skip: locateBrowser() }, () => {
     assert.equal(inner.length, 1)
     assert.equal(inner[0].page, 1)
     assert.equal(info.pageMode, '/UseOutlines')
+  })
+
+  test('설정의 내장 글꼴이 면 원고에 들어가 Type 3 없이 PDF 에 실린다', async () => {
+    await writeFile(join(root, 'booklet/korean.html'), face('한글', '<p style="font-family:\'Noto Sans KR\'">한글 문장 <b>굵게</b></p>'))
+    await writeFile(join(root, 'korean.config.json'), JSON.stringify({ documents: [{ id: 'korean', mode: 'pages', src: 'booklet/korean.html' }] }))
+    const { reports } = await build({ cwd: root, configFile: join(root, 'korean.config.json') })
+    assert.deepEqual(reports[0].problems, [])
+    const bytes = await readFile(join(root, 'typeset-out/korean.pdf'))
+    assert.equal((await inspectPdf(bytes)).type3Fonts, 0)
+    assert.deepEqual(await fontNames(bytes), ['NotoSansKR-Bold', 'NotoSansKR-Regular'])
   })
 
   test('vars 에 없는 이름이 있으면 굽지 않고 missing-var 로 알린다', async () => {

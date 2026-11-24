@@ -3,6 +3,7 @@
 // 먼저 읽을 파일: 없음.
 import { readdir, stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { nullIfMissing } from '../../platform.mjs'
 
 const hasWildcard = (segment) => /[*?]/.test(segment)
 
@@ -44,7 +45,7 @@ async function expandOne(pattern, root) {
   const segments = pattern.split('/').filter(Boolean)
   if (!segments.some(hasWildcard)) {
     const path = resolve(root, pattern)
-    const info = await stat(path).catch(() => null)
+    const info = await nullIfMissing(() => stat(path))
     return info?.isFile() ? [path] : []
   }
   const literal = segments.findIndex(hasWildcard)

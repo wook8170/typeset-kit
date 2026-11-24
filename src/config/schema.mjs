@@ -57,6 +57,8 @@ export const TYPESET = record({
   landTableMinCols: count(8),
   fitFigures: flag(false),
   sectionListMax: count(0),
+  tableColWidths: choice(['equal', 'content'], 'equal'),
+  splitSectionList: flag(false),
 })
 
 const DOCUMENT = record(

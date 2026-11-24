@@ -35,5 +35,5 @@ export function contAttr(block, words, escape) {
 
 /** 이어지는 조각 표시 CSS. 표 캡션과 같은 글자 크기 · 색을 쓴다. */
 export function landContCss(ink3) {
-  return `\n.btblcont::before{content:attr(data-cont);display:block;font-size:11px;font-weight:600;color:${ink3};margin:0 0 6px}`
+  return `\n.btblcont::before{content:attr(data-cont);display:block;font-size:11px;font-weight:700;color:${ink3};margin:0 0 6px}`
 }

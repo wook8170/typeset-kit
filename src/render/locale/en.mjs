@@ -25,6 +25,8 @@ export default Object.freeze({
   contact: 'Contact',
   tocEyebrow: 'CONTENTS',
   tocTitle: 'Contents',
+  // pages 모드가 앞에 붙이는 차례 면의 제목
+  pagesTocTitle: 'Contents',
   chapterSections: 'Sections in this chapter',
   chapterSectionCount: (count) => `This chapter has ${count} sections. See the contents for the list.`,
   callouts: { note: 'Note', caution: 'Caution', warning: 'Warning' },

@@ -8,21 +8,24 @@
 
 | 파일 | 내보내는 것 | 맡는 레인 |
 |---|---|---|
-| `src/modes/spec.mjs` | `buildDocument(job)` — 책 명세 문서 굽기 | T2 |
+| `src/modes/spec.mjs` | `buildDocument(job)` — 책 명세 문서 굽기, `buildSpec(job, spec, deps)` — 이미 만든 명세 굽기(book 모드가 부른다) | T2 |
 | `src/render/index.mjs` | `renderPrintHtml(spec, options)` · `renderBody(spec, options)` | T2 |
+| `src/render/` 의 `blocks` · `front` · `running` · `styles` · `table-widths` · `landscape` · `csp` · `svg-guard` · `locale/index` | 렌더 안쪽 파일. 공개 진입점은 `render/index.mjs` 다 | T2 |
 | `src/render/paginator.mjs` | `paginatorScript` · `pageChromeCss` · `roman` | T2 |
 | `src/render/locale/ko.mjs` · `en.mjs` | 문서 안에 찍히는 낱말 묶음 | T2 |
 | `src/theme/index.mjs` | 기본 테마 값 · `defineTheme` | T2 |
 | `src/modes/pages.mjs` | `buildDocument(job)` — 쪽 HTML 문서 굽기 | T3 |
-| `src/pdf/index.mjs` | `applyPdfNav` · `applyPdfNavBytes` · `mergePdfs` · `inspectPdf` | T3 |
+| `src/pdf/index.mjs` | `applyPdfNav` · `applyPdfNavBytes(bytes, { pageLabels, outline, links, objectStreams })` · `mergePdfs` · `inspectPdf(bytes)` | T3 |
+| `src/pdf/` 의 `nav` · `merge` · `inspect` · `destinations`, `src/check/rules.mjs`, `src/modes/pages/*` | 안쪽 파일(크기 상한 때문에 나눴다) | T3 |
 | `src/check/index.mjs` | `checkPdfs(paths, options)` | T3 |
 | `src/writing/index.mjs` | `checkWriting({ root, config, mode })` | T4 |
 | `src/fonts/builtin.mjs` | `BUILTIN_FONTS` 표 | T4 |
-| `src/fonts/css.mjs` | `fontCss(fontSpecs, { root })` | T4 |
-| `src/input/markdown.mjs` | `markdownToSpec(text, options)` | T5 |
-| `src/input/images.mjs` | 그림 넣기 · 줄이기 | T5 |
-| `src/modes/book.mjs` | `buildDocument(job)` — Markdown 을 명세로 바꾼 뒤 spec 모드에 넘긴다 | T5 |
-| `src/web/*` | 웹판 CSS 와 웹판 HTML 만들기 | T5 |
+| `src/fonts/css.mjs` | `fontCss(fontSpecs, { root })` — `fontSpecs` 는 글꼴 지정의 **목록**이다(예: `[theme.fonts.sans, theme.fonts.mono]`). 동기 함수이고 CSS 문자열을 돌려준다 | T4 |
+| `src/input/markdown.mjs` | `markdownToSpec(text, options)` · `parseMarkdown` · `mergeParts` | T5 |
+| `src/input/images.mjs` | `inlineSpecImages(spec, { root, limits, cdp })` → `{ spec, problems }`. 그림 파일을 data 주소로, inline SVG 를 `svgText` 로 바꾸고 큰 PNG 를 줄인다. 없는 파일 · 바깥 주소는 `missing-file` 문제다 | T5 |
+| `src/input/` 의 `markdown-blocks` · `markdown-inline` · `png` · `image-shrinker` | 안쪽 파일 | T5 |
+| `src/modes/book.mjs` | `buildDocument(job)` — Markdown 을 명세로 바꾼 뒤 `buildSpec` 에 넘긴다 | T5 |
+| `src/web/index.mjs` · `styles.mjs` | `renderWebHtml(spec, { settings, fontCss, theme })` — 웹판 HTML 문자열 | T5 |
 
 T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치지 않고, 바꿀 것이 있으면 메인에 요청한다.
 
@@ -64,6 +67,8 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 | `typeset.landTableMinCols` | 0 이상 정수 | `8` | `auto` 일 때 가로로 싣는 열 수 기준 |
 | `typeset.fitFigures` | 참거짓 | `false` | 그림마다 자리(본문 · 한 쪽 · 가로 쪽)를 고른다 |
 | `typeset.sectionListMax` | 0 이상 정수 | `0` | 장 표지의 절 목록 상한. 0 이면 상한이 없다 |
+| `typeset.tableColWidths` | `equal` \| `content` | `equal` | 표 열 폭. `content` 면 칸 글 길이로 잰다(표의 `widths` 가 먼저다) |
+| `typeset.splitSectionList` | 참거짓 | `false` | 장 표지의 절 목록이 한 쪽을 넘으면 다음 쪽으로 이어 싣는다 |
 | `documents` | 목록(필수) | — | 아래 문서 키 |
 | `writing` | 묶음 | 아래 | 글쓰기 검사 |
 
@@ -173,6 +178,27 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 - 그림 줄이기와 data URI 넣기는 렌더 전에 끝낸다(T5 `src/input/images.mjs`). 렌더가 받는 `figure.src` 는 data URI 이고, `inline` SVG 는 `svgText` 에 들어 있다.
 - 확장 블록(예: 스토리보드)은 `extraBlocks: { 종류: 필드 표 }` 로 검사를 통과시키고, 렌더에는 같은 이름의 렌더 함수를 넘긴다. 0.1 에는 확장 블록이 없다.
 
+### 4.3 Markdown 에서 블록으로 (book 모드)
+
+| 원고 | 결과 |
+|---|---|
+| 첫 `#` | 명세 `title`. 없으면 문서 키 `title` |
+| 첫 `##` 앞 문단 | `lede`(여럿이면 줄을 바꿔 잇는다). 문단 말고 다른 블록이 오면 오류다 |
+| `##` | 장. 번호 `1` 부터. 바로 아래 첫 문단은 `summary` |
+| `##` 와 첫 `###` 사이의 나머지 블록 | 장 제목을 이름으로 한 절 |
+| `###` | 절. 번호 `장.절` |
+| `####` 이하 | `h3` 블록 |
+| 문단 | `p`. 작성자가 쓴 HTML 은 이스케이프하고 주석은 지운다. 링크는 `http` · `https` · `mailto` · `#` 만 남긴다 |
+| 그림 하나만 있는 문단 `![캡션](경로 "제목")` | `figure`. 캡션은 제목, 없으면 대체 글. 번호 `장-순번`. 경로는 원고 폴더 기준이고 root 기준으로 바꾼다. `.svg` 는 `inline: true` |
+| 글머리 목록 | `ul`. 겹친 목록은 항목 안 HTML 목록 |
+| 번호 목록 | `ol`. 항목 안 코드 블록은 `{ html, code }`. 1 이 아닌 시작 번호는 `start` |
+| 코드 블록 | `code` |
+| 표(GFM) | `table`. 가운데 정렬 칸은 `{ html, align: 'center' }` |
+| 인용문 | `callout`. 첫 낱말을 굵게 쓴 종류 이름(언어 묶음의 표시 낱말 또는 종류 키)이면 그 종류, 아니면 `note` |
+| 가로줄 | 블록을 만들지 않는다 |
+
+문서 키 `src` 가 목록이면 파일 순서대로 이어 한 권으로 만들고 장 번호도 잇는다. `revisions` JSON 은 `[[버전, 날짜, 변경, 작성], …]` 또는 `{ revisions, readers, related, contact }` 이고 `docInfo` 가 된다.
+
 ## 5. 모드 모듈 계약
 
 굽기 흐름은 문서마다 그 모드의 `buildDocument(job)` 을 한 번 부른다. 브라우저는 굽기 흐름이 한 번만 띄워 모든 문서가 함께 쓴다.
@@ -207,6 +233,8 @@ job = {
 
 - 재지 않은 수는 `null` 로 둔다.
 - 문제 코드는 `overflow` · `pdf-size` · `svg-guard` · `missing-var` · `missing-file` 이다. 새 코드는 이 표에 먼저 더한다.
+- `landscapePages` · `bookmarks` · `links` 는 구운 PDF 를 `inspectPdf` 로 다시 읽어 센다. `links` 는 문서 안 링크만 센다(바깥 주소 제외).
+- pages 모드는 원고가 둘 이상이면 하나의 HTML 로 묶을 수 없어 `files.printHtml` 이 `null` 이다. 웹판은 book · spec 모드만 낸다.
 - 넘친 쪽은 `allowOverflow` 가 아니면 문제다. 크기 상한을 넘으면 PDF 를 지운 뒤 문제로 적는다.
 
 ## 6. 쪽 나누기 스크립트가 알리는 값
@@ -237,9 +265,24 @@ printPdf 는 `{ pdf, meta: { pages, front, anchors, err, overflow } }` 를 돌�
 
 `checkPdfs(paths, options)` 는 `{ results, hasProblems }` 를 돌려준다. `results` 는 `[{ file, status: 'ok' | 'fail', problems: ['코드: 설명'], facts }]` 다. `facts` 에는 차례 줄 수 · 책갈피 수와 단계 · 링크 수 · 쪽 번호 표기 · 가로 쪽 수 · Type 3 글꼴 수 · 크기를 담는다. 명령은 `hasProblems` 가 참이면 종료 코드 1 로 끝낸다. `--json` 이면 결과를 그대로 낸다.
 
+문제 코드는 다음과 같다.
+
+| 코드 | 조건 |
+|---|---|
+| `page-mode` | `/PageMode` 가 `/UseOutlines` 가 아니다 |
+| `no-bookmarks` · `bookmark-depth` · `bookmark-target` | 책갈피 없음 · 단계가 상한(기본 2)을 넘음 · 가리키는 쪽이 없음 |
+| `dead-links` | 문서 안 링크의 목적지가 없다 |
+| `toc-count` · `toc-target` · `toc-order` · `toc-body` | 차례 줄 수 ≠ 책갈피 수 · 줄 목적지 ≠ 책갈피 쪽 · 목적지가 줄어듦 · 차례 뒤 책갈피 없음 |
+| `page-labels` | 차례가 있는데 쪽 번호 표기가 없거나 본문 첫 쪽의 표기가 `1` 이 아니다 |
+| `type3-fonts` | Type 3 글꼴이 있다(`allowType3` 로 푼다) |
+| `pdf-size` | 크기 상한을 넘는다 |
+| `missing-file` · `unreadable` | 파일을 못 읽음 · PDF 가 아님 |
+
+차례는 책갈피 맨 위 단계에서 `목차` · `차례` · `Contents` · `Table of Contents` 와 이름이 같은 항목으로 찾는다. 차례 쪽에 찍힌 숫자 자체는 읽지 않고, 차례 쪽 링크의 목적지와 책갈피 쪽을 견준다.
+
 ## 8. check-writing 의 결과
 
-`checkWriting({ root, config, mode })` 의 `mode` 는 `report` · `check` · `update-baseline` 가운데 하나다. 돌려주는 값은 `{ findings, hasProblems }` 다. `findings` 는 `[{ file, line, rule, text, suggest, level }]` 이고, `file` 은 root 기준 `/` 경로다. `level` 은 그 규칙의 모드(`warn` · `ratchet` · `fail`)다. `hasProblems` 는 `fail` 규칙에 걸린 것이 있거나, `check` 에서 기준선보다 늘어난 칸이 있을 때 참이다.
+`checkWriting({ root, config, mode })` 의 `mode` 는 `report` · `check` · `update-baseline` 가운데 하나다. 돌려주는 값은 `{ findings, hasProblems, regressed, improved }` 다. `regressed` · `improved` 는 기준선보다 늘어난 칸 · 줄어든 칸(`[{ rule, file, was, now }]`)이다. 명령은 `check` 에서 늘어난 칸 없이 줄어든 칸만 있으면 재잠금(`--update-baseline`)을 안내한다. `findings` 는 `[{ file, line, rule, text, suggest, level }]` 이고, `file` 은 root 기준 `/` 경로다. `level` 은 그 규칙의 모드(`warn` · `ratchet` · `fail`)다. `hasProblems` 는 `fail` 규칙에 걸린 것이 있거나, `check` 에서 기준선보다 늘어난 칸이 있을 때 참이다.
 
 ## 9. 내장 글꼴 표
 

@@ -72,7 +72,7 @@ describe('전체 점검', () => {
     await writeFile(join(dir, 'typeset.config.json'), JSON.stringify({ browser: { path: 'nope/chrome' }, documents: [] }))
     let launched = false
     const results = await runDoctor({ cwd: dir, env: {}, nodeVersion: '22.1.0', launch: async () => { launched = true } })
-    assert.deepEqual(results.map((item) => [item.id, item.status]), [['node', 'ok'], ['config', 'ok'], ['browser', 'fail'], ['fonts', 'fail']])
+    assert.deepEqual(results.map((item) => [item.id, item.status]), [['node', 'ok'], ['config', 'ok'], ['browser', 'fail'], ['fonts', 'ok']], '내장 글꼴 파일은 패키지에 들어 있다')
     assert.ok(!launched)
     await removeTree(dir)
   })

@@ -18,6 +18,7 @@ const stubDeps = (extra = {}) => ({
   fontCss: async () => '/* fonts */',
   builtinFonts: async () => BUILTIN,
   applyPdfNavBytes: async (bytes) => ({ bytes, pages: null }),
+  inspectPdf: async () => ({ outline: [{ depth: 0, title: 'a', page: 1 }], links: [{ external: false }, { external: true }], landscapePages: 0 }),
   ...extra,
 })
 
@@ -133,7 +134,8 @@ describe('굽기', () => {
     const deps = stubDeps({
       inlineImages: async (input, options) => {
         calls.push(['images', options.limits.imageMaxPx])
-        return { ...input, chapters: input.chapters.map((chapter) => ({ ...chapter, sections: chapter.sections.map((section) => ({ ...section, blocks: section.blocks.map((block) => (block.src === 'img/a.png' ? { ...block, src: 'data:image/png;base64,AA' } : block)) })) })) }
+        const spec = { ...input, chapters: input.chapters.map((chapter) => ({ ...chapter, sections: chapter.sections.map((section) => ({ ...section, blocks: section.blocks.map((block) => (block.src === 'img/a.png' ? { ...block, src: 'data:image/png;base64,AA' } : block)) })) })) }
+        return { spec, problems: [] }
       },
       renderWeb: async (input, options) => (calls.push(['web', options.settings.locale]), '<!doctype html><title>web</title>'),
     })
@@ -151,7 +153,16 @@ describe('굽기', () => {
     assert.equal(report.files.pdf, 'out/guide.pdf')
     assert.equal(readFileSync(join(job.root, 'out/guide.pdf'), 'latin1'), '%PDF-1.7 fake')
     assert.deepEqual([report.pages, report.frontPages, report.bytes, report.browser], [5, 2, 13, 'HeadlessChrome/150.0.0.0'])
+    assert.deepEqual([report.landscapePages, report.bookmarks, report.links], [0, 1, 1], '가로 쪽 · 책갈피 · 내부 링크는 구운 PDF 를 읽어 센다')
     assert.deepEqual(report.problems, [])
+  })
+  test('그림 넣기 단계가 알린 문제는 굽지 않고 보고에 담는다', async () => {
+    const spec = virtualSpec()
+    spec.chapters[0].sections[0].blocks.push({ t: 'figure', src: 'img/none.png', caption: '없는 그림' })
+    const deps = stubDeps({ inlineImages: async (input) => ({ spec: input, problems: ['missing-file: img/none.png'] }) })
+    const report = await buildDocument(project('image-missing', { spec }), deps)
+    assert.deepEqual(report.problems, ['missing-file: img/none.png'])
+    assert.equal(report.files.printHtml, null)
   })
   test('PDF: 넘친 쪽은 문제로, 크기 상한을 넘으면 파일을 지우고 문제로', async () => {
     const overflowJob = project('overflow', { outputs: { pdf: true, printHtml: false, web: false }, session: { cdp: fakeCdp({ meta: { pages: 3, front: 1, anchors: {}, err: null, overflow: ['2'] } }), timeoutMs: 0 } })

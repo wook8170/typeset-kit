@@ -3,6 +3,7 @@
 // 먼저 읽을 파일: browser/print.mjs(문서를 빈 쪽에 써 넣어서 상대 경로가 열리지 않는 까닭).
 import { readFile } from 'node:fs/promises'
 import { dirname, extname, resolve } from 'node:path'
+import { nullIfMissing } from '../../platform.mjs'
 
 const MIME = {
   '.png': 'image/png',
@@ -23,7 +24,7 @@ const isLocalReference = (reference) => reference !== '' && !/^([a-z][a-z0-9+.-]
 async function toDataUri(reference, baseDir) {
   const mime = MIME[extname(reference.split(/[?#]/)[0]).toLowerCase()]
   if (!mime) return null
-  const bytes = await readFile(resolve(baseDir, decodeURI(reference.split(/[?#]/)[0]))).catch(() => null)
+  const bytes = await nullIfMissing(() => readFile(resolve(baseDir, decodeURI(reference.split(/[?#]/)[0]))))
   return bytes ? `data:${mime};base64,${bytes.toString('base64')}` : null
 }
 
@@ -54,7 +55,7 @@ async function inlineStylesheets(html, baseDir, missing) {
   return replaceAsync(html, link, async (tag) => {
     const reference = /\bhref=["']([^"']+)["']/i.exec(tag)?.[1]
     if (!reference || !isLocalReference(reference)) return tag
-    const css = await readFile(resolve(baseDir, decodeURI(reference)), 'utf8').catch(() => null)
+    const css = await nullIfMissing(() => readFile(resolve(baseDir, decodeURI(reference)), 'utf8'))
     if (css === null) {
       missing.push(reference)
       return tag

@@ -109,3 +109,16 @@ export const REMOVE_RETRIES = 5
 export function removeTree(dirPath) {
   return rm(dirPath, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: 200 })
 }
+
+/** 파일 · 폴더가 없어서 난 오류인가. 「없으면 없음」으로 다룰 곳에서 이 경우만 값으로 바꾸고 나머지(권한 등)는 그대로 던진다. */
+export const isMissingFileError = (error) => ['ENOENT', 'ENOTDIR', 'EISDIR'].includes(error?.code)
+
+/** 작업 하나를 실행하고, 파일이 없어서 실패하면 null 을 돌려준다. 다른 오류는 그대로 던진다. */
+export async function nullIfMissing(task) {
+  try {
+    return await task()
+  } catch (error) {
+    if (isMissingFileError(error)) return null
+    throw error
+  }
+}

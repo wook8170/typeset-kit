@@ -13,6 +13,7 @@ import {
   findExecutable,
   isEntryScript,
   isSamePath,
+  nullIfMissing,
   pathListSeparator,
   readTextFile,
   removeTree,
@@ -95,5 +96,13 @@ describe('폴더 지우기', () => {
     await removeTree(dir)
     assert.ok(!existsSync(dir))
     await removeTree(dir)
+  })
+})
+
+describe('없는 파일 다루기', () => {
+  test('파일이 없을 때만 null 이고 다른 오류는 그대로 던진다', async () => {
+    assert.equal(await nullIfMissing(async () => { throw Object.assign(new Error('x'), { code: 'ENOENT' }) }), null)
+    assert.equal(await nullIfMissing(async () => 'value'), 'value')
+    await assert.rejects(() => nullIfMissing(async () => { throw Object.assign(new Error('denied'), { code: 'EACCES' }) }), /denied/)
   })
 })
