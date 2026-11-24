@@ -3,6 +3,7 @@
 // 먼저 읽을 파일: render/paginator.mjs 의 pageChromeCss(쪽 크기와 쪽 크롬), theme/index.mjs(색 값).
 //
 // format = { words, theme, typeset, isLandBook } 는 render/index.mjs 가 만든다. 선택 사항을 켜지 않으면 그 CSS 는 들어가지 않는다.
+// 굵기는 400 · 700 두 가지만 쓴다. 내장 글꼴이 두 굵기뿐이라 다른 굵기는 가까운 굵기로 그려지기 때문이다.
 
 import { INK, INK2, INK3, LINE, LINE2, SURF } from '../theme/index.mjs'
 import { isLandBook, landBookCss, landContCss } from './landscape.mjs'
@@ -12,7 +13,7 @@ function approvalCss() {
   return `.cvbottom:has(.cvappr){bottom:120px}
 .cvbottom:has(.cvappr)>.cvmeta{align-content:start}
 .cvappr{grid-column:2;width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;margin-top:14px}
-.cvappr th{font-weight:600;color:${INK2};background:${SURF};padding:5px 0;border:1px solid ${LINE};text-align:center}
+.cvappr th{font-weight:700;color:${INK2};background:${SURF};padding:5px 0;border:1px solid ${LINE};text-align:center}
 .cvappr td{border:1px solid ${LINE};vertical-align:top;padding:4px 6px}
 .cvappr .cvsign td{height:58px}
 .cvappr .cvdate td{height:26px}
@@ -34,10 +35,10 @@ function coverCss({ theme }, hasApproval) {
 .cvset{font-size:11px;color:${INK3};letter-spacing:0.14em;margin-left:6px}
 .cvrev{font-family:${theme.mono};font-size:11px;color:${INK3}}
 .cvmain{position:absolute;left:64px;right:64px;top:250px;display:flex;flex-direction:column;gap:18px}
-.cvno{font-family:${theme.mono};font-size:96px;font-weight:500;line-height:1;color:${accent};letter-spacing:-0.04em}
+.cvno{font-family:${theme.mono};font-size:96px;font-weight:400;line-height:1;color:${accent};letter-spacing:-0.04em}
 .cvtitles{display:flex;flex-direction:column;gap:8px}
-.cvtitle{font-size:48px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
-.cven{font-size:12px;letter-spacing:0.26em;color:${INK3};font-weight:500}
+.cvtitle{font-size:48px;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+.cven{font-size:12px;letter-spacing:0.26em;color:${INK3};font-weight:400}
 .cvrule{width:64px;height:3px;background:${INK};margin-top:6px}
 .cvlede{font-size:15px;line-height:1.6;color:${INK2};max-width:520px;text-wrap:pretty}
 .cvbottom{position:absolute;left:64px;right:64px;bottom:150px;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:48px;align-items:end}
@@ -55,8 +56,8 @@ ${hasApproval ? approvalCss() : ''}.cvfoot{position:absolute;left:64px;right:64p
 function frontCss({ theme }) {
   return `
 /* ── 문서 정보 · 목차 ─────────────────────────────────── */
-.dieyebrow{font-size:11px;letter-spacing:0.2em;color:${INK3};font-weight:500}
-.dititle{font-size:30px;font-weight:800;letter-spacing:-0.02em;margin:6px 0 18px}
+.dieyebrow{font-size:11px;letter-spacing:0.2em;color:${INK3};font-weight:400}
+.dititle{font-size:30px;font-weight:700;letter-spacing:-0.02em;margin:6px 0 18px}
 /* 목차 줄 = 링크. 제목 뒤 점선(.tocdots)이 남은 폭을 채워 쪽 번호와 잇는다. 빈 칸의 아래 테두리가 글자 기준선에
    놓이므로 글자 높이 중간쯤으로 올린다. 제목이 길면 줄을 바꾸고 점선은 마지막 줄 끝에 최소 폭으로 남는다. */
 a.tocch,a.tocsec,a.coprow{color:inherit;text-decoration:none}
@@ -85,8 +86,8 @@ function chapterCss({ theme }) {
   return `
 /* ── 장 표지 ───────────────────────────────────────────── */
 .chopener{padding-top:120px}
-.copno{font-family:${theme.mono};font-size:72px;font-weight:500;line-height:1;color:${accent};letter-spacing:-0.04em}
-.copt{font-size:40px;font-weight:800;letter-spacing:-0.02em;margin-top:22px}
+.copno{font-family:${theme.mono};font-size:72px;font-weight:400;line-height:1;color:${accent};letter-spacing:-0.04em}
+.copt{font-size:40px;font-weight:700;letter-spacing:-0.02em;margin-top:22px}
 .copsum{font-size:15px;line-height:1.65;color:${INK2};max-width:520px;text-wrap:pretty;margin-top:22px}
 .copfacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:64px}
 .copfact{padding:14px 16px;border:1px solid ${LINE};border-radius:6px}
@@ -108,8 +109,8 @@ function textBlockCss({ theme }) {
 /* ── 본문 프리미티브 ───────────────────────────────────── */
 .bsechead{display:flex;align-items:baseline;gap:12px;margin:26px 0 10px}
 .bsechead:first-child{margin-top:0}
-.bsecno{font-family:${theme.mono};font-size:13px;color:${accent};font-weight:500;flex:none}
-.bsectitle{font-size:22px;font-weight:800;letter-spacing:-0.01em}
+.bsecno{font-family:${theme.mono};font-size:13px;color:${accent};font-weight:400;flex:none}
+.bsectitle{font-size:22px;font-weight:700;letter-spacing:-0.01em}
 .bsecmono{font-family:${theme.mono};font-size:12px;color:${INK3}}
 .bh3{font-size:15px;font-weight:700;letter-spacing:-0.01em;margin:18px 0 8px}
 .bp{margin:0 0 12px;font-size:13px;line-height:1.7;color:${INK2};text-wrap:pretty}
@@ -123,7 +124,7 @@ code{font-family:${theme.mono};font-size:0.92em;color:${INK}}
 .bdv{color:${INK2}}
 .bsteps{margin:0 0 14px;padding:0 0 0 22px;font-size:13px;line-height:1.65;color:${INK}}
 .bsteps>li{margin-bottom:8px}
-.bsteps>li::marker{color:${INK3};font-family:${theme.mono};font-weight:500}
+.bsteps>li::marker{color:${INK3};font-family:${theme.mono};font-weight:400}
 .bul{margin:0 0 14px;padding:0 0 0 20px;font-size:13px;line-height:1.65;color:${INK2}}
 .bul>li{margin-bottom:6px}
 .bul>li::marker{color:${INK3}}
@@ -137,7 +138,7 @@ code{font-family:${theme.mono};font-size:0.92em;color:${INK}}
 function tableAndCalloutCss({ theme, words }) {
   return `.btblwrap{margin:0 0 4px}
 .btbl{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
-.btbl th{text-align:left;padding:8px 10px;font-size:11px;color:${INK2};background:${SURF};border-top:1.5px solid ${INK};border-bottom:1px solid ${LINE};font-weight:600}
+.btbl th{text-align:left;padding:8px 10px;font-size:11px;color:${INK2};background:${SURF};border-top:1.5px solid ${INK};border-bottom:1px solid ${LINE};font-weight:700}
 .btbl td{padding:9px 10px;border-bottom:1px solid ${LINE};vertical-align:top;line-height:1.5;color:${INK2};word-break:${words.wordBreak};overflow-wrap:anywhere}
 .btbl.bcompact td{padding:4px 10px;font-size:12px;line-height:1.4}
 .btbl.bcompact th{padding:5px 10px}

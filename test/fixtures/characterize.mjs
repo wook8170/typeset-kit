@@ -34,6 +34,12 @@ export function normalizeScript(script, { romanSource, messages }) {
 /** CSS 의 주석과 공백을 지운다. */
 export const normalizeCss = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, '')
 
+/**
+ * 굵기를 내장 글꼴의 두 굵기로 바꾼다(500 → 400, 600 · 800 → 700). 옮긴 엔진은 굵기를 이렇게 바꿨다.
+ * 내장 글꼴로 그리면 브라우저가 고르는 글꼴 파일이 바꾸기 전과 같아서 쪽 배치는 달라지지 않는다.
+ */
+export const mapWeightsToBuiltin = (css) => css.replace(/font-weight:500\b/g, 'font-weight:400').replace(/font-weight:(600|800)\b/g, 'font-weight:700')
+
 /** 조판 HTML 에서 흐름 블록(#flow 안)과 문서 CSS(둘째 <style>)를 꺼낸다. */
 export function splitPrintHtml(html) {
   const flowStart = html.indexOf('<div id="flow" aria-hidden="true">')

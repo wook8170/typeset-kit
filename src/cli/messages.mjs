@@ -12,7 +12,7 @@ const MESSAGES = {
       '  check <pdf…>       PDF 의 차례 · 책갈피 · 링크 · 쪽 번호 표기를 검사한다',
       '  check-writing      글쓰기 규칙을 검사한다 (--check · --update-baseline)',
       '  doctor             굽기 환경(Node · 브라우저 · 책갈피 · 글꼴 · 설정)을 점검한다',
-      '  init               설정 파일 견본을 만든다 (--force 로 덮어쓴다)',
+      '  init               설정 파일 견본과 예제 원고를 만든다 (--locale ko|en · --force 로 덮어쓴다)',
       '',
       '공통 옵션: --config <파일>',
     ].join('\n'),
@@ -28,6 +28,8 @@ const MESSAGES = {
     initExists: (file) => `이미 있습니다: ${file} (덮어쓰려면 --force)`,
     checkNeedsFiles: '검사할 PDF 파일을 하나 이상 주십시오.',
     writingMode: '--check 와 --update-baseline 은 함께 쓸 수 없습니다.',
+    writingImproved: (count) => `기준선보다 ${count}칸이 줄었습니다. 기준선을 다시 잠그려면 typeset-kit check-writing --update-baseline 을 실행하십시오.`,
+    initLocale: (value) => `--locale 은 ko 또는 en 입니다: ${value}`,
   },
   en: {
     usage: [
@@ -38,7 +40,7 @@ const MESSAGES = {
       '  check <pdf…>          check table of contents, bookmarks, links and page labels in PDFs',
       '  check-writing         check writing rules (--check, --update-baseline)',
       '  doctor                check the build environment (Node, browser, bookmarks, fonts, config)',
-      '  init                  write a sample config file (--force overwrites)',
+      '  init                  write a sample config and manuscript (--locale ko|en, --force overwrites)',
       '',
       'Common option: --config <file>',
     ].join('\n'),
@@ -54,6 +56,8 @@ const MESSAGES = {
     initExists: (file) => `Already exists: ${file} (use --force to overwrite)`,
     checkNeedsFiles: 'Give at least one PDF file to check.',
     writingMode: '--check and --update-baseline cannot be used together.',
+    writingImproved: (count) => `${count} baseline cell(s) went down. Run typeset-kit check-writing --update-baseline to lock the new baseline.`,
+    initLocale: (value) => `--locale must be ko or en: ${value}`,
   },
 }
 

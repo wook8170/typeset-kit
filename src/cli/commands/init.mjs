@@ -1,14 +1,18 @@
-// init 명령 — 설정 파일 견본(typeset.config.mjs)을 만든다. 이미 있으면 --force 없이는 덮어쓰지 않는다.
+// init 명령 — 설정 파일 견본(typeset.config.mjs)과 예제 원고(docs/)를 만든다. 이미 있는 파일은 --force 없이는 덮어쓰지 않는다.
 // 부르는 곳: cli/main.mjs.
-// 먼저 읽을 파일: config/schema.mjs(견본이 맞춰야 할 키).
+// 먼저 읽을 파일: config/schema.mjs(견본이 맞춰야 할 키), examples/<언어>/docs(복사하는 예제 원고).
 import { existsSync } from 'node:fs'
-import { writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises'
+import { dirname, join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { EXIT } from '../exit.mjs'
 
 export const options = { force: { type: 'boolean' }, locale: { type: 'string' } }
 
 export const INIT_FILE = 'typeset.config.mjs'
+
+/** 패키지에 든 예제 폴더. 언어마다 docs/ 아래에 원고 · 개정 이력 · 그림이 있다. */
+export const EXAMPLES_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../examples')
 
 /** 견본 설정의 글(순수 함수). 이 글을 그대로 가져와 검사해도 문제가 없어야 한다(테스트가 확인한다). */
 export function initConfigSource(locale = 'ko') {
@@ -20,19 +24,50 @@ export default {
   brand: { name: 'Acme Docs', publisher: 'Acme Inc.', contact: 'https://example.com' },
   cover: { meta: [['${isKorean ? '문서번호' : 'Document'}', 'DOC-01'], ['${isKorean ? '적용 버전' : 'Version'}', '1.0']] },
   documents: [
-    { id: 'guide', mode: 'book', src: 'docs/guide.md', title: '${isKorean ? '사용 안내서' : 'User Guide'}' },
+    { id: 'guide', mode: 'book', src: 'docs/guide.md', title: '${isKorean ? '사용 안내서' : 'User Guide'}', revisions: 'docs/guide.revisions.json' },
   ],
+  writing: { languages: ['${isKorean ? 'ko' : 'en'}'] },
 }
 `
 }
 
+/** 폴더 안의 파일 목록(하위 폴더 포함, 기준 폴더에 대한 상대 경로). */
+async function listFiles(dir, base = dir) {
+  const files = []
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) files.push(...(await listFiles(path, base)))
+    else files.push(relative(base, path))
+  }
+  return files
+}
+
+/** 만들 파일 목록 — 설정 파일 하나와 그 언어의 예제 파일들. */
+async function plannedFiles(cwd, locale) {
+  const exampleRoot = join(EXAMPLES_DIR, locale)
+  const examples = (await listFiles(exampleRoot)).map((file) => ({ from: join(exampleRoot, file), to: join(cwd, file) }))
+  return { config: join(cwd, INIT_FILE), examples }
+}
+
+/** 만들 파일 중 하나라도 이미 있으면 --force 없이는 아무것도 쓰지 않는다. */
 export async function run({ values }, io) {
-  const file = join(io.cwd, INIT_FILE)
-  if (existsSync(file) && !values.force) {
-    io.err(io.messages.initExists(file))
+  const locale = values.locale ?? 'ko'
+  if (!['ko', 'en'].includes(locale)) {
+    io.err(io.messages.initLocale(locale))
+    return EXIT.usage
+  }
+  const plan = await plannedFiles(io.cwd, locale)
+  const targets = [plan.config, ...plan.examples.map((file) => file.to)]
+  const existing = targets.filter((file) => existsSync(file))
+  if (existing.length && !values.force) {
+    io.err(io.messages.initExists(existing.join(', ')))
     return EXIT.failed
   }
-  await writeFile(file, initConfigSource(values.locale ?? 'ko'))
-  io.out(io.messages.initCreated(file))
+  await writeFile(plan.config, initConfigSource(locale))
+  for (const file of plan.examples) {
+    await mkdir(dirname(file.to), { recursive: true })
+    await copyFile(file.from, file.to)
+  }
+  io.out(io.messages.initCreated(targets.join(', ')))
   return EXIT.ok
 }

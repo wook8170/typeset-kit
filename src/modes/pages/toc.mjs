@@ -17,8 +17,6 @@ export const TOC_LAYOUT = Object.freeze({
 const PIXEL_TO_POINT = 0.75
 export const A4_HEIGHT_POINT = 841.89
 
-export const TOC_WORDS = { ko: '차례', en: 'Contents' }
-
 /** 차례 줄 수에 따른 차례 쪽 수. */
 export function tocPageCount(entryCount) {
   return Math.max(1, Math.ceil(entryCount / TOC_LAYOUT.rowsPerPage))

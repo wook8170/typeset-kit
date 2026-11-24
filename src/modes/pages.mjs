@@ -14,7 +14,8 @@ import { loadFonts } from './pages/fonts.mjs'
 import { flattenTree, shiftTree, treeFromFaces, treeFromFlat } from './pages/outline.mjs'
 import { expandSources } from './pages/sources.mjs'
 import { fillVars, pageTitle, preparePage } from './pages/template.mjs'
-import { TOC_WORDS, tocHtml, tocLinks, tocPageCount } from './pages/toc.mjs'
+import { localeWords } from '../render/locale/index.mjs'
+import { tocHtml, tocLinks, tocPageCount } from './pages/toc.mjs'
 
 const BYTES_PER_MB = 1024 * 1024
 
@@ -66,7 +67,7 @@ async function bakePage(session, html) {
 
 /** 합친 PDF 에 차례 면을 앞에 붙이고, 차례 링크 · 책갈피 · 쪽 번호 표기(차례 로마 숫자, 본문 1부터)를 단다. */
 async function addToc({ session, settings, fonts, bodyBytes, tree }) {
-  const heading = TOC_WORDS[settings.locale] ?? TOC_WORDS.en
+  const heading = localeWords(settings.locale).pagesTocTitle
   const rows = flattenTree(tree).map((row) => ({ ...row, number: row.pageIndex + 1 }))
   const frontPages = tocPageCount(rows.length)
   const tocPdf = await bakePage(session, tocHtml(rows, { heading, family: fonts.family, fontCss: fonts.css }))
@@ -122,7 +123,7 @@ async function fillPdfReport(report, bytes, frontPages, session) {
 
 async function bakeDocument(job, report, pages) {
   const { session, settings, root, document } = job
-  const fonts = await loadFonts(settings, root)
+  const fonts = loadFonts(settings, root)
   const pdfs = []
   for (const page of pages) pdfs.push(await bakePage(session, preparePage(page.html, { fontCss: fonts.css })))
   const { bytes, frontPages } = await assemble({ session, settings, document, fonts, pages, pdfs })
