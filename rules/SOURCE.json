@@ -1,0 +1,9 @@
+{
+  "upstream": "lanekit kit/checks/writing",
+  "license": "MIT",
+  "files": {
+    "ko.mjs": { "upstream": "rules-ko.mjs", "sha256": "855968e51c793efa4f0bd4cc789c50f594b39be941ac804eb0773ac16f8f955e" },
+    "en.mjs": { "upstream": "rules-en.mjs", "sha256": "79e5c3de80a35751812b72caca84741f8109bf45dbbb91df44abb197c3b2f929" }
+  },
+  "note": "ko.mjs and en.mjs are byte-identical copies. Change them upstream first, then copy and update the hashes here. Extra rules live in extra-ko.mjs."
+}
