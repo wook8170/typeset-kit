@@ -6,6 +6,7 @@
 // 조판 크기(CSS px)는 원본 파일로 정하므로 줄여도 쪽 배치는 바뀌지 않는다.
 
 import { readFile } from 'node:fs/promises'
+import { closeTab } from '../browser/print.mjs'
 import { pngHeader, shrinkSize } from './png.mjs'
 
 /** 큰 응답을 한 번에 받으면 돌아오지 않는 경우가 있어 결과 data 주소를 이 크기씩 나눠 받는다. */
@@ -52,7 +53,7 @@ export async function createImageReader({ cdp = null, maxPx = 0 } = {}) {
       if (!cache.has(file)) cache.set(file, loadOne(file))
       return cache.get(file)
     },
-    close: () => (tab ? cdp.send('Target.closeTarget', { targetId: tab.targetId }) : undefined),
+    close: () => (tab ? closeTab(cdp, tab.targetId) : undefined),
   }
 }
 

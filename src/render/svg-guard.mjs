@@ -11,6 +11,7 @@
 //   - 주석은 XML 과 HTML 이 같은 범위로 읽는 꼴(`<!--` 바로 뒤가 `>` · `->` 가 아니고, 안에 `--` 가 없음)만 받는다.
 //   - 같은 속성이 두 번 나오면 두 값을 모두 검사한다. 두 값이 모두 목록을 지나면 어느 쪽으로 읽어도 결과가 같다.
 //   - 문자 참조는 XML 기본 다섯 개와 숫자 참조만 받는다. 값 검사는 참조를 푼 뒤에 한다.
+//   - 태그 안의 공백은 HTML 이 공백으로 보는 글자(스페이스 · 탭 · LF · CR · FF)만 받는다.
 //   - 속성 값의 `url(` 은 `#` 로 시작하는 문서 안 참조만 받는다. 값에 역빗금(CSS 이스케이프)이 있으면 실패다.
 
 /** 허용 요소. `image` 는 `href` 가 그림 data 주소일 때만 받는다(checkValue). */
@@ -50,6 +51,10 @@ const NAMED_REFS = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 const NAME = /^[A-Za-z_][A-Za-z0-9_.:-]*/
 // 문자열을 그림으로 부를 수 있는 CSS 함수 — `url(` 말고도 따옴표 문자열로 자원을 부른다.
 const LOADERS = /(?:image-set|image|cross-fade|element)\s*\(|@import/i
+
+// 태그 안의 공백. HTML 이 공백으로 보는 다섯 글자만 받는다. JavaScript 의 \\s 는 U+00A0 · 세로 탭 등도 공백으로 봐서,
+// 그 글자로 띄운 속성을 이 검사와 브라우저가 다르게 읽게 된다.
+const TAG_SPACE = /^[ \t\n\r\f]*/
 
 class SvgReject extends Error {}
 const reject = (message) => {
@@ -105,7 +110,7 @@ function checkValue(element, name, raw) {
 function readAttrs(source, start, element, allow) {
   let at = start
   for (;;) {
-    const spaces = /^\s*/.exec(source.slice(at))[0].length
+    const spaces = TAG_SPACE.exec(source.slice(at))[0].length
     at += spaces
     if (source.startsWith('/>', at)) return { end: at + 2, isEmpty: true }
     if (source[at] === '>') return { end: at + 1, isEmpty: false }
@@ -114,7 +119,7 @@ function readAttrs(source, start, element, allow) {
     if (!name) reject(`<${element}>: unreadable attribute name`)
     if (!allow.attrs.has(name)) reject(`<${element}>: attribute not in the allow list "${name}"`)
     at += name.length
-    const equals = /^\s*=\s*(["'])/.exec(source.slice(at))
+    const equals = /^[ \t\n\r\f]*=[ \t\n\r\f]*(["'])/.exec(source.slice(at))
     if (!equals) reject(`<${element} ${name}>: value is not quoted`)
     at += equals[0].length
     const close = source.indexOf(equals[1], at)
@@ -139,7 +144,7 @@ function skipComment(source, at) {
 
 /** 닫는 태그를 읽는다. 여는 태그와 짝이 맞아야 한다. */
 function readCloseTag(source, at, stack) {
-  const match = /^<\/([A-Za-z_][A-Za-z0-9_.:-]*)\s*>/.exec(source.slice(at))
+  const match = /^<\/([A-Za-z_][A-Za-z0-9_.:-]*)[ \t\n\r\f]*>/.exec(source.slice(at))
   if (!match) reject('unreadable closing tag')
   if (stack.at(-1) !== match[1]) reject(`closing tag </${match[1]}> does not match the open tag`)
   stack.pop()

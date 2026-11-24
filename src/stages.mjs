@@ -1,4 +1,4 @@
-// 단계 모듈 불러오기 — 조판 모드 · PDF 검사 · 글쓰기 검사처럼 다른 레인이 채우는 모듈을 필요할 때 불러온다.
+// 단계 모듈 불러오기 — 조판 모드 · PDF 검사 · 글쓰기 검사처럼 단계마다 따로 둔 모듈을 필요할 때 불러온다.
 // 부르는 곳: build/index.mjs, index.mjs(check · checkWriting), doctor/checks.mjs(내장 글꼴 표).
 // 먼저 읽을 파일: docs/contract.md 「파일 소유와 진입 함수」(어느 파일이 무엇을 내보내야 하나).
 

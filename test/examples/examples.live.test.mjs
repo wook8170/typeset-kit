@@ -1,10 +1,11 @@
-// 예제 원고 굽기 시험 — init 이 만드는 한국어 · 영어 예제를 실제 브라우저로 PDF · 웹판까지 굽고, check 로 차례 · 책갈피 · 링크를 확인한다.
+// 예제 원고 굽기 시험 — init 이 만드는 한국어 · 영어 예제와 표 · 그림이 많은 보고서 예제(examples/report)를 실제 브라우저로 PDF · 웹판까지 굽고, check 로 차례 · 책갈피 · 링크를 확인한다.
 // 부르는 곳: npm test. 브라우저를 찾지 못하는 환경에서는 건너뛴다.
 // 먼저 읽을 파일: examples/<언어>/docs/guide.md, src/cli/commands/init.mjs, src/check/index.mjs.
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile } from 'node:fs/promises'
+import { cp, mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { after, describe, test } from 'node:test'
 import { build } from '../../src/build/index.mjs'
 import { withChrome } from '../../src/browser/chrome.mjs'
@@ -60,4 +61,20 @@ describe('예제 원고', { skip: browserSkipReason(), timeout: 240000 }, () => 
       assert.deepEqual(narrow, { scroll: 375, side: 'none', mini: 'block' })
     })
   }
+
+  test('report: 표와 그림이 많은 보고서가 넘친 쪽 없이 구워진다. 열이 많은 표는 가로 쪽에 실리고, 긴 표는 여러 쪽에 이어 실린다', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'typeset-example-report-'))
+    folders.push(dir)
+    await cp(fileURLToPath(new URL('../../examples/report', import.meta.url)), dir, { recursive: true })
+    const [report] = (await build({ cwd: dir, outputs: { pdf: true, printHtml: true, web: true } })).reports
+    assert.deepEqual(report.problems, [])
+    assert.deepEqual(report.overflow, [])
+    assert.equal(report.landscapePages, 1)
+    assert.ok(report.pages >= 12, `pages ${report.pages}`)
+    const checked = await checkPdfs([join(dir, report.files.pdf)], { cwd: dir, requireToc: true })
+    assert.deepEqual(checked.results[0].problems, [])
+    assert.equal(checked.results[0].facts.type3Fonts, 0)
+    const printed = await readFile(join(dir, report.files.printHtml), 'utf8')
+    assert.equal(printed.match(/<img src="data:image\/png;base64,/g)?.length, 1, 'PNG figure is embedded')
+  })
 })

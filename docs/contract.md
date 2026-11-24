@@ -2,39 +2,39 @@
 
 이 문서는 조판 단계들이 주고받는 값의 꼴을 정한다. 설정 · 책 명세 · 블록 · 모드 모듈 · 쪽 나누기 스크립트 · 검사 결과가 대상이다. 각 단계는 이 꼴만 믿고 따로 만들 수 있다. 계약을 바꾸려면 이 문서와 그 계약을 검사하는 코드를 같은 변경에서 고친다. 검사 코드는 `src/config/schema.mjs` 와 `src/spec/contract.mjs` 다.
 
-## 1. 파일 소유와 진입 함수
+## 1. 단계 파일과 진입 함수
 
 아래 표의 파일은 표에 적힌 함수를 내보내야 한다. 굽기 흐름(`src/build/index.mjs`)과 공개 진입점은 이 파일들을 필요할 때 불러온다(`src/stages.mjs`). 파일이 아직 없으면 명령은 「아직 구현되지 않은 단계」라고 알리고 종료 코드 2 로 끝난다.
 
-| 파일 | 내보내는 것 | 맡는 레인 |
-|---|---|---|
-| `src/modes/spec.mjs` | `buildDocument(job)` — 책 명세 문서 굽기, `buildSpec(job, spec, deps)` — 이미 만든 명세 굽기(book 모드가 부른다) | T2 |
-| `src/render/index.mjs` | `renderPrintHtml(spec, options)` · `renderBody(spec, options)` | T2 |
-| `src/render/` 의 `blocks` · `front` · `running` · `styles` · `table-widths` · `landscape` · `csp` · `svg-guard` · `locale/index` | 렌더 안쪽 파일. 공개 진입점은 `render/index.mjs` 다 | T2 |
-| `src/render/paginator.mjs` | `paginatorScript` · `pageChromeCss` · `roman` | T2 |
-| `src/render/locale/ko.mjs` · `en.mjs` | 문서 안에 찍히는 낱말 묶음 | T2 |
-| `src/theme/index.mjs` | 기본 테마 값 · `defineTheme` | T2 |
-| `src/modes/pages.mjs` | `buildDocument(job)` — 쪽 HTML 문서 굽기 | T3 |
-| `src/pdf/index.mjs` | `applyPdfNav` · `applyPdfNavBytes(bytes, { pageLabels, outline, links, objectStreams })` · `mergePdfs` · `inspectPdf(bytes)` | T3 |
-| `src/pdf/` 의 `nav` · `merge` · `inspect` · `destinations`, `src/check/rules.mjs`, `src/modes/pages/*` | 안쪽 파일(크기 상한 때문에 나눴다) | T3 |
-| `src/check/index.mjs` | `checkPdfs(paths, options)` | T3 |
-| `src/writing/index.mjs` | `checkWriting({ root, config, mode })` | T4 |
-| `src/fonts/builtin.mjs` | `BUILTIN_FONTS` 표 | T4 |
-| `src/fonts/css.mjs` | `fontCss(fontSpecs, { root })` — `fontSpecs` 는 글꼴 지정의 **목록**이다(예: `[theme.fonts.sans, theme.fonts.mono]`). 동기 함수이고 CSS 문자열을 돌려준다 | T4 |
-| `src/input/markdown.mjs` | `markdownToSpec(text, options)` · `parseMarkdown` · `mergeParts` | T5 |
-| `src/input/images.mjs` | `inlineSpecImages(spec, { root, limits, cdp })` → `{ spec, problems }`. 그림 파일을 data 주소로, inline SVG 를 `svgText` 로 바꾸고 큰 PNG 를 줄인다. 없는 파일 · 바깥 주소는 `missing-file` 문제다 | T5 |
-| `src/input/` 의 `markdown-blocks` · `markdown-inline` · `png` · `image-shrinker` | 안쪽 파일 | T5 |
-| `src/modes/book.mjs` | `buildDocument(job)` — Markdown 을 명세로 바꾼 뒤 `buildSpec` 에 넘긴다 | T5 |
-| `src/web/index.mjs` · `styles.mjs` | `renderWebHtml(spec, { settings, fontCss, theme })` — 웹판 HTML 문자열 | T5 |
+| 파일 | 내보내는 것 |
+|---|---|
+| `src/modes/spec.mjs` | `buildDocument(job)` — 책 명세 문서 굽기, `buildSpec(job, spec, deps)` — 이미 만든 명세 굽기(book 모드가 부른다) |
+| `src/render/index.mjs` | `renderPrintHtml(spec, options)` · `renderBody(spec, options)` |
+| `src/render/` 의 `blocks` · `front` · `running` · `styles` · `table-widths` · `landscape` · `csp` · `svg-guard` · `locale/index` | 렌더 안쪽 파일. 공개 진입점은 `render/index.mjs` 다 |
+| `src/render/paginator.mjs` | `paginatorScript` · `pageChromeCss` · `roman` |
+| `src/render/locale/ko.mjs` · `en.mjs` | 문서 안에 찍히는 낱말 묶음 |
+| `src/theme/index.mjs` | 기본 테마 값 · `defineTheme` |
+| `src/modes/pages.mjs` | `buildDocument(job)` — 쪽 HTML 문서 굽기 |
+| `src/pdf/index.mjs` | `applyPdfNav` · `applyPdfNavBytes(bytes, { pageLabels, outline, links, objectStreams })` · `mergePdfs` · `inspectPdf(bytes)` |
+| `src/pdf/` 의 `nav` · `merge` · `inspect` · `destinations`, `src/check/rules.mjs`, `src/modes/pages/*` | 안쪽 파일(크기 상한 때문에 나눴다) |
+| `src/check/index.mjs` | `checkPdfs(paths, options)` |
+| `src/writing/index.mjs` | `checkWriting({ root, config, mode })` |
+| `src/fonts/builtin.mjs` | `BUILTIN_FONTS` 표 |
+| `src/fonts/css.mjs` | `fontCss(fontSpecs, { root })` — `fontSpecs` 는 글꼴 지정의 **목록**이다(예: `[theme.fonts.sans, theme.fonts.mono]`). 동기 함수이고 CSS 문자열을 돌려준다 |
+| `src/input/markdown.mjs` | `markdownToSpec(text, options)` · `parseMarkdown` · `mergeParts` |
+| `src/input/images.mjs` | `inlineSpecImages(spec, { root, limits, cdp })` → `{ spec, problems }`. 그림 파일을 data 주소로, inline SVG 를 `svgText` 로 바꾸고 큰 PNG 를 줄인다. 없는 파일 · 바깥 주소는 `missing-file`, 프로젝트 폴더(설정 파일이 있는 폴더) 밖을 가리키는 경로는 `outside-root` 문제다. 폴더 안의 심볼릭 링크가 폴더 밖을 가리켜도 밖으로 본다 |
+| `src/input/` 의 `markdown-blocks` · `markdown-inline` · `png` · `image-shrinker` | 안쪽 파일 |
+| `src/modes/book.mjs` | `buildDocument(job)` — Markdown 을 명세로 바꾼 뒤 `buildSpec` 에 넘긴다 |
+| `src/web/index.mjs` · `styles.mjs` | `renderWebHtml(spec, { settings, fontCss, theme })` — 웹판 HTML 문자열 |
 
-T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치지 않고, 바꿀 것이 있으면 메인에 요청한다.
+뼈대 파일은 다음과 같다. 단계 파일은 이 파일들이 정한 꼴에 맞춘다.
 
 - `package.json` · `bin/` · `src/cli/` · `src/config/` · `src/spec/`
 - `src/browser/` · `src/doctor/` · `src/build/` · `src/stages.mjs` · `src/platform.mjs` · `src/index.mjs`
 
-의존을 더할 레인(T5 의 `marked` 등)은 정확한 버전을 보고서에 적는다. 메인이 `package.json` 에 넣는다.
+런타임 의존은 `package.json` 에 정확한 버전으로 고정한다.
 
-`package.json` 의 `exports` 에는 하위 경로 여덟 개를 미리 적어 두었다(`.` · `./config` · `./spec` · `./browser` · `./paginator` · `./render` · `./theme` · `./pdf-nav`). 그래서 다른 레인은 `package.json` 을 고치지 않고 표의 파일만 만들면 된다.
+`package.json` 의 `exports` 에는 하위 경로 여덟 개가 있다(`.` · `./config` · `./spec` · `./browser` · `./paginator` · `./render` · `./theme` · `./pdf-nav`).
 
 ## 2. 설정 계약
 
@@ -72,7 +72,7 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 | `documents` | 목록(필수) | — | 아래 문서 키 |
 | `writing` | 묶음 | 아래 | 글쓰기 검사 |
 
-자리표시자는 `{title}` · `{brand}` · `{edition}` · `{chapter}` · `{section}` · `{page}` 여섯 개다. 해석은 렌더(T2)가 한다.
+자리표시자는 `{title}` · `{brand}` · `{edition}` · `{chapter}` · `{section}` · `{page}` 여섯 개다. 해석은 렌더가 한다.
 
 선택 사항의 기본값은 모두 「끔」이다. 그래서 켜지 않은 문서는 버전을 올려도 조판 결과가 바뀌지 않는다.
 
@@ -84,7 +84,7 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 | `mode` | `book` \| `spec` \| `pages`(필수) | 입력 방식 |
 | `src` | 경로 또는 경로 목록(필수) | `book` 은 Markdown, `spec` 은 `.mjs` · `.json`, `pages` 는 HTML 글롭 |
 | `title` | 문자열 | 문서 제목. 책 명세에 제목이 있으면 그 값이 먼저다 |
-| `out` | 문자열 | 출력 파일 이름(확장자 없이). 비면 `id` 를 쓴다 |
+| `out` | 문자열 | 출력 파일 이름(확장자 없이). 비면 `id` 를 쓴다. 폴더 구분자 · `: * ? " < > \|` · 점으로 시작하는 이름은 쓸 수 없고, 점 · 공백 · `.web` 으로 끝나는 이름과 Windows 장치 이름(`CON` 등)도 쓸 수 없다. 두 문서의 출력 이름이 겹치면 오류다(대소문자만 다른 것도 겹친다) |
 | `revisions` | 경로 | `book` 전용. 개정 이력 JSON |
 | `theme` · `cover` · `header` · `footer` · `typeset` | 전역과 같은 키의 일부 | 이 문서만 덮어쓴다 |
 | `vars` | `{ 이름: 값 }` | `pages` 전용. 원고의 `{{이름}}` 을 채운다. 원고에 있는데 `vars` 에 없는 이름이 있으면 실패한다 |
@@ -158,7 +158,7 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 
 ### 4.2 블록
 
-필드 종류는 둘로 나뉜다. 「마크업」 필드는 작성자가 쓴 인라인 HTML 을 그대로 넣는다. 「글」 필드는 렌더가 이스케이프한다. Markdown 변환(T5)은 마크업 필드에 넣기 전에 원문을 이스케이프한다.
+필드 종류는 둘로 나뉜다. 「마크업」 필드는 작성자가 쓴 인라인 HTML 을 그대로 넣는다. 「글」 필드는 렌더가 이스케이프한다. Markdown 변환은 마크업 필드에 넣기 전에 원문을 이스케이프한다.
 
 | `t` | 필수 필드 | 선택 필드 | 비고 |
 |---|---|---|---|
@@ -175,7 +175,7 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 | `cards` | `items`: `[{ title(글), value(마크업), note?(마크업) }]` | `label`(글) | 수치 카드 |
 | `sources` | `html`(마크업) | | 근거 줄. 앞 낱말은 언어 묶음에서 온다 |
 
-- 그림 줄이기와 data URI 넣기는 렌더 전에 끝낸다(T5 `src/input/images.mjs`). 렌더가 받는 `figure.src` 는 data URI 이고, `inline` SVG 는 `svgText` 에 들어 있다.
+- 그림 줄이기와 data URI 넣기는 렌더 전에 끝낸다(`src/input/images.mjs`). 렌더가 받는 `figure.src` 는 data URI 이고, `inline` SVG 는 `svgText` 에 들어 있다.
 - 확장 블록(예: 스토리보드)은 `extraBlocks: { 종류: 필드 표 }` 로 검사를 통과시키고, 렌더에는 같은 이름의 렌더 함수를 넘긴다. 0.1 에는 확장 블록이 없다.
 
 ### 4.3 Markdown 에서 블록으로 (book 모드)
@@ -197,7 +197,9 @@ T1 이 만든 파일은 다음과 같다. 다른 레인은 이 파일을 고치�
 | 인용문 | `callout`. 첫 낱말을 굵게 쓴 종류 이름(언어 묶음의 표시 낱말 또는 종류 키)이면 그 종류, 아니면 `note` |
 | 가로줄 | 블록을 만들지 않는다 |
 
-문서 키 `src` 가 목록이면 파일 순서대로 이어 한 권으로 만들고 장 번호도 잇는다. `revisions` JSON 은 `[[버전, 날짜, 변경, 작성], …]` 또는 `{ revisions, readers, related, contact }` 이고 `docInfo` 가 된다.
+문서 키 `src` 가 목록이면 파일 순서대로 이어 한 권으로 만들고 장 번호도 잇는다. `revisions` JSON 은 `[[버전, 날짜, 변경, 작성], …]` 또는 `{ revisions, readers, related, contact }` 이고 `docInfo` 가 된다. 칸은 모두 문자열이어야 한다. 책 명세에서 마크업인 칸(변경 내용 · 독자 · 관계 · 문의 값)은 `book` 모드에서 Markdown 인라인 문법으로 읽는다. 그래서 원고와 같이 작성자가 쓴 HTML 은 글자로 보인다.
+
+그림 주소는 프로젝트 폴더 안의 파일이거나 `data:image/…;base64,` 꼴이어야 한다. 다른 꼴의 `data:` 주소는 `bad-image` 문제다. 파일 머리의 `---` 묶음(front matter)은 따로 다루지 않고 본문으로 읽는다. 장(`##`)이 하나도 없는 원고는 명세 오류(`empty chapters`)다.
 
 ## 5. 모드 모듈 계약
 
@@ -232,14 +234,24 @@ job = {
 ```
 
 - 재지 않은 수는 `null` 로 둔다.
-- 문제 코드는 `overflow` · `pdf-size` · `svg-guard` · `missing-var` · `missing-file` 이다. 새 코드는 이 표에 먼저 더한다.
+- 문제 코드는 `overflow` · `pdf-size` · `svg-guard` · `missing-var` · `missing-file` · `outside-root` · `bad-image` 다. 새 코드는 이 표에 먼저 더한다.
+- `outside-root` 는 원고(Markdown · 책 명세 · 쪽 HTML · 그 안의 SVG 와 CSS)가 프로젝트 폴더 밖의 파일을 가리킬 때다. 그 파일은 읽지 않는다. 함께 쓰는 그림은 프로젝트 폴더 안에 두거나 설정 파일을 윗폴더에 둔다.
+- 넘친 쪽 판정(`overflow`)은 본문 쪽의 세로 넘침만 본다. 표지 · 가로 넘침 · `pages` 모드 · PDF 를 굽지 않는 출력(`--web` · `--html-only`)은 판정하지 않는다.
+- 굽기를 시작하면 고른 문서의 지난 산출물(이번에 낼 종류만)과 지난 `typeset-report.json` 을 먼저 지운다. 굽기가 실패하면 그 문서의 파일은 남지 않는다.
+
+알려진 한계는 다음과 같다.
+
+- `pages` 모드의 원고는 작성자가 짠 HTML 을 그대로 굽는다. 내용 보안 정책을 넣지 않고, 바깥 주소(`https:`)의 자원은 굽는 동안 요청되며, `vars` 값은 이스케이프하지 않고 넣는다. 믿는 원고에만 쓴다.
+- 설정 값(콜아웃 색 · 글꼴 이름 · 굵기)은 CSS 에 그대로 들어간다. 설정 파일은 믿는 입력으로 본다. 설정의 경로(`brand.logo` · 글꼴 `path` · `src` · `revisions` · `outDir`)도 프로젝트 폴더 밖을 가리킬 수 있다.
+- Markdown 변환은 일부 내용을 줄인다. 글과 섞인 그림은 대체 글만 남고, 목록 · 인용문 안의 표와 인용문 안의 코드는 원문 글자로 실린다. HTML 주석은 어느 자리에서든 싣지 않는다.
+- 하드 링크는 가려내지 못한다. 프로젝트 폴더 안의 하드 링크가 가리키는 내용은 폴더 안의 파일로 읽는다.
 - `landscapePages` · `bookmarks` · `links` 는 구운 PDF 를 `inspectPdf` 로 다시 읽어 센다. `links` 는 문서 안 링크만 센다(바깥 주소 제외).
 - pages 모드는 원고가 둘 이상이면 하나의 HTML 로 묶을 수 없어 `files.printHtml` 이 `null` 이다. 웹판은 book · spec 모드만 낸다.
 - 넘친 쪽은 `allowOverflow` 가 아니면 문제다. 크기 상한을 넘으면 PDF 를 지운 뒤 문제로 적는다.
 
 ## 6. 쪽 나누기 스크립트가 알리는 값
 
-`printPdf(cdp, html, { timeoutMs })`(`src/browser/print.mjs`)는 문서를 빈 쪽에 써 넣고 창 변수가 아래처럼 될 때까지 기다린다. 그래서 렌더가 넣는 쪽 나누기 스크립트(T2)는 이 값을 지켜야 한다.
+`printPdf(cdp, html, { timeoutMs })`(`src/browser/print.mjs`)는 문서를 빈 쪽에 써 넣고 창 변수가 아래처럼 될 때까지 기다린다. 그래서 렌더가 넣는 쪽 나누기 스크립트는 이 값을 지켜야 한다.
 
 | 변수 | 누가 쓰나 | 뜻 |
 |---|---|---|
@@ -252,12 +264,13 @@ job = {
 | `window.__anchors` | 스크립트 | `{ 앵커: 쪽 번호 }` |
 | `window.__overflow` | 스크립트 | 넘친 쪽 번호 목록 |
 
-printPdf 는 `{ pdf, meta: { pages, front, anchors, err, overflow } }` 를 돌려준다. PDF 는 책갈피 옵션(`generateDocumentOutline`)을 켜고 스트림으로 받는다. 책갈피 창 열기 · 쪽 번호 표기 · 객체 스트림 저장은 그 뒤에 `applyPdfNav`(T3)가 한다.
+printPdf 는 `{ pdf, meta: { pages, front, anchors, err, overflow } }` 를 돌려준다. PDF 는 책갈피 옵션(`generateDocumentOutline`)을 켜고 스트림으로 받는다. 책갈피 창 열기 · 쪽 번호 표기 · 객체 스트림 저장은 그 뒤에 `applyPdfNav` 가 한다.
 
-브라우저 규칙은 다음과 같다. `withChrome` 이 지키므로 다른 레인은 브라우저를 직접 띄우지 않는다.
+브라우저 규칙은 다음과 같다. `withChrome` 이 지키므로 다른 단계는 브라우저를 직접 띄우지 않는다.
 
 - `--headless=new` 로만 띄운다. 로컬 파일에 접근하게 하는 인자는 넣지 않는다.
-- 임시 프로필을 쓰고, 끝나면(실패해도) 프로세스를 끄고 프로필을 지운다.
+- 임시 프로필을 쓰고, 끝나면(실패해도) 프로세스를 끄고 프로필을 지운다. 도는 중에 SIGINT · SIGTERM · SIGHUP 을 받아도 같은 정리를 한 뒤 그 신호로 끝난다.
+- 명령 하나의 답은 `COMMAND_TIMEOUT_MS`(5분)까지만 기다린다. 연결이 끊기거나 탭이 죽으면 기다리던 명령은 바로 실패한다.
 - 디버깅 포트는 0 으로 주고, 브라우저가 프로필의 `DevToolsActivePort` 에 적은 포트로 붙는다.
 - 문서는 `file://` 로 열지 않는다.
 
@@ -273,6 +286,7 @@ printPdf 는 `{ pdf, meta: { pages, front, anchors, err, overflow } }` 를 돌�
 | `no-bookmarks` · `bookmark-depth` · `bookmark-target` | 책갈피 없음 · 단계가 상한(기본 2)을 넘음 · 가리키는 쪽이 없음 |
 | `dead-links` | 문서 안 링크의 목적지가 없다 |
 | `toc-count` · `toc-target` · `toc-order` · `toc-body` | 차례 줄 수 ≠ 책갈피 수 · 줄 목적지 ≠ 책갈피 쪽 · 목적지가 줄어듦 · 차례 뒤 책갈피 없음 |
+| `toc-missing` | `requireToc`(명령은 `--require-toc`)를 줬는데 차례 책갈피가 없다. 주지 않으면 차례 없는 PDF 는 차례 검사를 건너뛴다 |
 | `page-labels` | 차례가 있는데 쪽 번호 표기가 없거나 본문 첫 쪽의 표기가 `1` 이 아니다 |
 | `type3-fonts` | Type 3 글꼴이 있다(`allowType3` 로 푼다) |
 | `pdf-size` | 크기 상한을 넘는다 |
@@ -283,6 +297,8 @@ printPdf 는 `{ pdf, meta: { pages, front, anchors, err, overflow } }` 를 돌�
 ## 8. check-writing 의 결과
 
 `checkWriting({ root, config, mode })` 의 `mode` 는 `report` · `check` · `update-baseline` 가운데 하나다. 돌려주는 값은 `{ findings, hasProblems, regressed, improved }` 다. `regressed` · `improved` 는 기준선보다 늘어난 칸 · 줄어든 칸(`[{ rule, file, was, now }]`)이다. 명령은 `check` 에서 늘어난 칸 없이 줄어든 칸만 있으면 재잠금(`--update-baseline`)을 안내한다. `findings` 는 `[{ file, line, rule, text, suggest, level }]` 이고, `file` 은 root 기준 `/` 경로다. `level` 은 그 규칙의 모드(`warn` · `ratchet` · `fail`)다. `hasProblems` 는 `fail` 규칙에 걸린 것이 있거나, `check` 에서 기준선보다 늘어난 칸이 있을 때 참이다.
+
+Markdown 원고의 글은 굽기와 같은 읽개의 토큰에서 뽑고, 문단 · 제목 · 목록 항목 · 표 칸마다 줄을 이어 한 덩어리로 본다(줄 경계에 걸친 표현도 찾는다). 쪽 HTML 과 책 명세의 글은 빈 줄이나 블록 태그(`p` · `li` · `td` · 제목 등)로 나뉘지 않은 줄을 한 덩어리로 본다. 코드 블록 · 인라인 코드 · HTML 주석만 빼고, 목록 · 인용문 · 표 칸 · 그림 캡션은 본다. 개정 이력 파일도 대상이다. 검사 전에 글을 NFC 로 맞춘다. 볼 파일이 하나도 없으면 통과가 아니라 오류(`WritingCheckError`)다.
 
 ## 9. 내장 글꼴 표
 
@@ -297,5 +313,5 @@ printPdf 는 `{ pdf, meta: { pages, front, anchors, err, overflow } }` 를 돌�
 | 2 | 인자 오류, 설정 오류, 없는 문서 id, 아직 없는 단계 |
 
 - 라이브러리가 던지는 오류 문구는 영어다. 명령줄의 안내 문구는 `TYPESET_KIT_LANG` → `LC_ALL` → `LANG` 순서로 보고, `ko` 로 시작하면 한국어로 낸다.
-- 문서 안에 찍히는 낱말(차례 · 그림 · 계속 등)은 명령줄 문구와 별개다. 설정 `locale` 의 언어 묶음(T2)에서 온다.
-- 설정 오류는 `ConfigError.problems` 에 `{ path, code, expected, got }` 로 모두 담긴다. 코드는 `unknown-key` · `missing-key` · `wrong-type` · `not-allowed` · `out-of-range` · `no-match` · `duplicate-id` · `mode-key` · `invalid-json` · `config-not-found` 다.
+- 문서 안에 찍히는 낱말(차례 · 그림 · 계속 등)은 명령줄 문구와 별개다. 설정 `locale` 의 언어 묶음에서 온다.
+- 설정 오류는 `ConfigError.problems` 에 `{ path, code, expected, got }` 로 모두 담긴다. 코드는 `unknown-key` · `missing-key` · `wrong-type` · `not-allowed` · `out-of-range` · `no-match` · `duplicate-id` · `duplicate-out` · `mode-key` · `invalid-json` · `config-not-found` · `missing-default-export`(`.mjs` 설정에 `export default` 가 없음) · `no-documents`(`build` 에서 문서가 0개) 다.

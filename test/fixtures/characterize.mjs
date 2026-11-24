@@ -19,6 +19,10 @@ export const PAGINATOR_OPTION_SETS = Object.freeze({
 export const SOURCE_MESSAGES = ['조판이 수렴하지 않습니다(', '회 · ', '초) — ', '(시작)', '번째 블록 · ']
 export const MESSAGES = ['Typesetting did not converge (', ' steps, ', ' s) at ', '(start)', '. block · ']
 
+/** 차례 쪽 제목. 옮긴 뒤 한국어 제목을 「차례」로 통일했으므로 견줄 때는 옮기기 전 낱말로 되돌린다. */
+export const SOURCE_TOC_TITLE = '목차'
+export const restoreSourceTocTitle = (flow, title) => flow.replace(`aria-level="1">${title}</div>`, `aria-level="1">${SOURCE_TOC_TITLE}</div>`)
+
 export const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex')
 
 /**

@@ -3,7 +3,7 @@
 // 먼저 읽을 파일: docs/contract.md 「책 명세」(docInfo · chapters), 「설정 계약」(cover · brand).
 
 import { INK } from '../theme/index.mjs'
-import { escapeHtml } from './blocks.mjs'
+import { escapeAttr, escapeHtml } from './blocks.mjs'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -160,7 +160,7 @@ export function chapterOpenerHtml(chapter, { words, outlineSpace, sectionListMax
   const anchor = escapeHtml(chapter.anchor)
   return (
     `<div class="chopener" data-break="before" data-solo="1" data-anchor="${anchor}" ` +
-    `data-chapterhead="${escapeHtml(`${number}. ${chapter.title}`)}">` +
+    `data-chapterhead="${escapeAttr(`${number}. ${chapter.title}`)}">` +
     // id 는 이 머리에 둔다. 쪽 나누기 스크립트는 장 표지의 자식만 쪽에 옮겨 싣는다.
     `<div class="cophead" id="${anchor}" role="heading" aria-level="1">` +
     `<div class="copno">${escapeHtml(number)}${outlineSpace}</div>` +

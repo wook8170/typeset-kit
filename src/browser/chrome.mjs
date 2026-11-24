@@ -2,10 +2,11 @@
 // 부르는 곳: browser/index.mjs(공개 진입점), doctor/checks.mjs(버전 · 책갈피 점검), 조판 모드(modes/*).
 // 먼저 읽을 파일: browser/find.mjs(실행 파일 찾기), browser/print.mjs(문서 넣기 · PDF 굽기).
 import { spawn } from 'node:child_process'
+import { rmSync } from 'node:fs'
 import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { removeTree } from '../platform.mjs'
+import { removeTree, WINDOWS } from '../platform.mjs'
 import { connectCdp } from './cdp.mjs'
 import { findBrowser } from './find.mjs'
 
@@ -84,14 +85,68 @@ function startBrowser(executable, profileDir) {
   return launch
 }
 
+/** 프로세스를 끝내는 신호. 이 신호를 받으면 Node 는 finally 를 돌리지 않고 끝난다. */
+const EXIT_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP']
+
+/** 신호를 받은 뒤 브라우저가 끝나기를 기다리는 상한(밀리초). 보조 프로세스가 출력 통로를 쥐고 있으면 끝남 알림이 늦게 온다. */
+const EXIT_WAIT_MS = 3000
+
+/** 이 프로세스를 그 신호로 끝낸다. Windows 는 자기 자신에게 신호를 보낼 수 없어서 실패 코드로 끝낸다. */
+function endBySignal(signal) {
+  if (process.platform === WINDOWS) process.exit(1)
+  process.kill(process.pid, signal)
+}
+
+/**
+ * 프로세스가 신호나 process.exit 로 끝날 때 브라우저와 임시 프로필을 지우게 등록한다. 돌려주는 값 = 등록을 푸는 함수.
+ * 등록하지 않으면 Ctrl+C · 시간 초과로 끝낸 실행에서 브라우저 프로세스와 프로필 폴더가 남는다.
+ * 첫 신호에서는 브라우저가 끝나기를 기다려 프로필을 지운 뒤 같은 신호로 끝낸다. 그래야 부모 프로세스가 「신호로 끝났다」고 본다.
+ * 정리하는 동안 신호가 또 오면 기다리지 않고 그 자리에서 지우고 끝낸다. 정리가 끝날 때까지 등록을 풀지 않는 까닭이다.
+ * 브라우저의 보조 프로세스는 끝난 직후에도 잠깐 프로필에 쓴다. 그래서 지우기는 다시 시도한다.
+ */
+function cleanupOnExit(launch, profileDir) {
+  const killBrowser = () => {
+    if (launch.child.exitCode === null && !launch.spawnError) launch.child.kill('SIGKILL')
+  }
+  // 기다릴 수 없는 자리(process.exit · 두 번째 신호)에서는 동기로 지우고 다시 시도한다.
+  const removeNow = () => {
+    killBrowser()
+    rmSync(profileDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
+  let isEnding = false
+  const onSignal = async (signal) => {
+    if (isEnding) {
+      removeNow()
+      release()
+      return endBySignal(signal)
+    }
+    isEnding = true
+    killBrowser()
+    await Promise.race([launch.ended, new Promise((resolve) => setTimeout(resolve, EXIT_WAIT_MS))])
+    await removeTree(profileDir)
+    release()
+    endBySignal(signal)
+  }
+  const handlers = EXIT_SIGNALS.map((signal) => [signal, () => onSignal(signal)])
+  for (const [signal, handler] of handlers) process.on(signal, handler)
+  const release = () => {
+    for (const [signal, handler] of handlers) process.removeListener(signal, handler)
+    process.removeListener('exit', removeNow)
+  }
+  process.once('exit', removeNow)
+  return release
+}
+
 /**
  * 헤드리스 브라우저를 띄워 fn(cdp, info) 를 부르고, 끝나면(실패해도) 연결 · 프로세스 · 임시 프로필을 정리한다.
  * info = { browserPath, profileDir, pid }. options.browserPath 를 주지 않으면 findBrowser 순서로 찾는다.
+ * 도는 중에 프로세스가 신호로 끝나도 브라우저와 프로필을 지운다(cleanupOnExit).
  */
 export async function withChrome(fn, { browserPath, env = process.env } = {}) {
   const executable = browserPath ?? findBrowser({ env })
   const profileDir = await mkdtemp(join(tmpdir(), 'typeset-kit-'))
   const launch = startBrowser(executable, profileDir)
+  const release = cleanupOnExit(launch, profileDir)
   try {
     const cdp = await connectCdp(await waitForDevTools(profileDir, launch))
     try {
@@ -103,6 +158,7 @@ export async function withChrome(fn, { browserPath, env = process.env } = {}) {
     if (launch.child.exitCode === null && !launch.spawnError) launch.child.kill('SIGKILL')
     await launch.ended
     await removeTree(profileDir)
+    release()
   }
 }
 

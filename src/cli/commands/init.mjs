@@ -1,10 +1,11 @@
 // init 명령 — 설정 파일 견본(typeset.config.mjs)과 예제 원고(docs/)를 만든다. 이미 있는 파일은 --force 없이는 덮어쓰지 않는다.
 // 부르는 곳: cli/main.mjs.
 // 먼저 읽을 파일: config/schema.mjs(견본이 맞춰야 할 키), examples/<언어>/docs(복사하는 예제 원고).
-import { existsSync } from 'node:fs'
-import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises'
+import { lstatSync } from 'node:fs'
+import { copyFile, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { isInsideRoot, isMissingFileError } from '../../platform.mjs'
 import { EXIT } from '../exit.mjs'
 
 export const options = { force: { type: 'boolean' }, locale: { type: 'string' } }
@@ -49,7 +50,28 @@ async function plannedFiles(cwd, locale) {
   return { config: join(cwd, INIT_FILE), examples }
 }
 
-/** 만들 파일 중 하나라도 이미 있으면 --force 없이는 아무것도 쓰지 않는다. */
+/** 그 자리에 무엇인가 있는가. 끊어진 심볼릭 링크도 「있음」이다(쓰면 링크가 가리키는 곳에 파일이 생기기 때문이다). */
+function isOccupied(file) {
+  try {
+    lstatSync(file)
+    return true
+  } catch (error) {
+    if (!isMissingFileError(error)) throw error
+    return false
+  }
+}
+
+/** 파일 하나를 쓴다. 그 자리에 있던 것(파일 · 심볼릭 링크)은 먼저 지운다. 링크를 따라가 다른 곳의 파일을 덮어쓰지 않기 위해서다. */
+async function placeFile(target, write) {
+  await mkdir(dirname(target), { recursive: true })
+  await rm(target, { force: true })
+  await write(target)
+}
+
+/**
+ * 만들 파일 중 하나라도 이미 있으면 --force 없이는 아무것도 쓰지 않는다.
+ * 만들 자리가 심볼릭 링크를 거쳐 지금 폴더 밖으로 나가면 --force 가 있어도 쓰지 않는다.
+ */
 export async function run({ values }, io) {
   const locale = values.locale ?? 'ko'
   if (!['ko', 'en'].includes(locale)) {
@@ -58,16 +80,18 @@ export async function run({ values }, io) {
   }
   const plan = await plannedFiles(io.cwd, locale)
   const targets = [plan.config, ...plan.examples.map((file) => file.to)]
-  const existing = targets.filter((file) => existsSync(file))
+  const outside = targets.filter((file) => !isInsideRoot(io.cwd, dirname(file)))
+  if (outside.length) {
+    io.err(io.messages.initOutside(outside.join(', ')))
+    return EXIT.failed
+  }
+  const existing = targets.filter(isOccupied)
   if (existing.length && !values.force) {
     io.err(io.messages.initExists(existing.join(', ')))
     return EXIT.failed
   }
-  await writeFile(plan.config, initConfigSource(locale))
-  for (const file of plan.examples) {
-    await mkdir(dirname(file.to), { recursive: true })
-    await copyFile(file.from, file.to)
-  }
+  await placeFile(plan.config, (target) => writeFile(target, initConfigSource(locale), { flag: 'wx' }))
+  for (const file of plan.examples) await placeFile(file.to, (target) => copyFile(file.from, target))
   io.out(io.messages.initCreated(targets.join(', ')))
   return EXIT.ok
 }

@@ -24,9 +24,8 @@ export default Object.freeze({
   relatedHead: ['Number', 'Title', 'Relation to this document'],
   contact: 'Contact',
   tocEyebrow: 'CONTENTS',
+  // 인쇄판 차례 쪽 · 웹판 차례 · pages 모드가 앞에 붙이는 차례 면이 함께 쓰는 제목
   tocTitle: 'Contents',
-  // pages 모드가 앞에 붙이는 차례 면의 제목
-  pagesTocTitle: 'Contents',
   chapterSections: 'Sections in this chapter',
   chapterSectionCount: (count) => `This chapter has ${count} sections. See the contents for the list.`,
   callouts: { note: 'Note', caution: 'Caution', warning: 'Warning' },

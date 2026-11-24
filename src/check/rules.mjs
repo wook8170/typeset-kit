@@ -50,9 +50,12 @@ export function checkLinks(info) {
   return lost.length === 0 ? [] : [`dead-links: ${lost.length} internal links point to no page (first on page ${lost[0].pageIndex + 1})`]
 }
 
-/** 차례 줄 수 = 책갈피 수, 줄마다 책갈피와 같은 쪽으로 가는지, 목적지 쪽이 줄어들지 않는지 본다. */
-export function checkToc(toc) {
-  if (!toc) return []
+/**
+ * 차례 줄 수 = 책갈피 수, 줄마다 책갈피와 같은 쪽으로 가는지, 목적지 쪽이 줄어들지 않는지 본다.
+ * 차례가 없는 PDF(쪽 HTML 로 만든 브로셔 등)는 건너뛴다. requireToc 를 주면 차례가 없는 것을 문제로 본다.
+ */
+export function checkToc(toc, { requireToc = false } = {}) {
+  if (!toc) return requireToc ? ['toc-missing: no bookmark named as a table of contents was found'] : []
   if (toc.bodyStart === null) return ['toc-body: no bookmark follows the table of contents']
   if (toc.lines.length !== toc.entries.length) {
     return [`toc-count: ${toc.lines.length} table of contents links, ${toc.entries.length} bookmarks`]

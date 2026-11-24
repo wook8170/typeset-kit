@@ -23,10 +23,11 @@ const BYTES_PER_MB = 1024 * 1024
 async function loadPage(file, vars, root) {
   const shown = toPosixPath(relative(root, file))
   const filled = fillVars(await readFile(file, 'utf8'), vars)
-  const inlined = await inlineAssets(filled.html, dirname(file))
+  const inlined = await inlineAssets(filled.html, dirname(file), root)
   const problems = [
     ...filled.missing.map((name) => `missing-var: {{${name}}} in ${shown} has no value in vars`),
     ...inlined.missing.map((reference) => `missing-file: ${reference} referenced by ${shown}`),
+    ...inlined.outside.map((reference) => `outside-root: ${reference} referenced by ${shown} is outside the project folder`),
   ]
   return { title: pageTitle(inlined.html) || basename(file, extname(file)), html: inlined.html, problems }
 }
@@ -67,7 +68,7 @@ async function bakePage(session, html) {
 
 /** 합친 PDF 에 차례 면을 앞에 붙이고, 차례 링크 · 책갈피 · 쪽 번호 표기(차례 로마 숫자, 본문 1부터)를 단다. */
 async function addToc({ session, settings, fonts, bodyBytes, tree }) {
-  const heading = localeWords(settings.locale).pagesTocTitle
+  const heading = localeWords(settings.locale).tocTitle
   const rows = flattenTree(tree).map((row) => ({ ...row, number: row.pageIndex + 1 }))
   const frontPages = tocPageCount(rows.length)
   const tocPdf = await bakePage(session, tocHtml(rows, { heading, family: fonts.family, fontCss: fonts.css }))

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 116" width="680" height="116" role="img" aria-label="문의 처리 단계">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4b5361"/>
+    </marker>
+  </defs>
+  <rect x="14" y="30" width="110" height="56" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="69" y="64" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="16" fill="#1b1f27">접수</text>
+  <line x1="126" y1="58" x2="146" y2="58" stroke="#4b5361" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="148" y="30" width="110" height="56" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="203" y="64" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="16" fill="#1b1f27">분류</text>
+  <line x1="260" y1="58" x2="280" y2="58" stroke="#4b5361" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="282" y="30" width="110" height="56" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="337" y="64" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="16" fill="#1b1f27">담당 배정</text>
+  <line x1="394" y1="58" x2="414" y2="58" stroke="#4b5361" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="416" y="30" width="110" height="56" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="471" y="64" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="16" fill="#1b1f27">처리</text>
+  <line x1="528" y1="58" x2="548" y2="58" stroke="#4b5361" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="550" y="30" width="110" height="56" rx="8" fill="#f4f5f8" stroke="#4b5361" stroke-width="1.5"/>
+  <text x="605" y="64" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="16" fill="#1b1f27">확인</text>
+</svg>

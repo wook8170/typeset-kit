@@ -31,6 +31,9 @@ function figureBlock(image, context) {
   }
 }
 
+/** 주석만 든 HTML 블록인가. 주석은 어느 자리에서든 독자에게 싣지 않는다. */
+const isCommentBlock = (token) => token.type === 'html' && isComment(token.text)
+
 /** 목록 항목 안의 블록 토큰들 → 인라인 HTML 과 코드. 겹친 목록은 HTML 목록으로 넣는다. */
 function itemParts(item) {
   const html = []
@@ -39,7 +42,7 @@ function itemParts(item) {
     if (token.type === 'code') code.push(token.text)
     else if (token.type === 'list') html.push(nestedListHtml(token))
     else if (token.type === 'text' || token.type === 'paragraph') html.push(inlineHtml(token.tokens ?? [{ type: 'text', text: token.text }]))
-    else if (token.type !== 'space') html.push(escapeText(token.raw ?? '').trim())
+    else if (token.type !== 'space' && !isCommentBlock(token)) html.push(escapeText(token.raw ?? '').trim())
   }
   return { html: html.filter(Boolean).join(' '), code }
 }
@@ -90,13 +93,20 @@ export function calloutKind(tokens, kindNames) {
   return { kind, rest: trimmed }
 }
 
-/** 인용문 → 콜아웃. 종류 낱말이 없으면 note 다. 문단이 여럿이면 줄을 바꿔 잇는다. */
+/** 인용문 안의 블록 하나 → 콜아웃 본문 조각. 문단은 인라인 HTML, 목록은 HTML 목록, 그 밖(표 · 코드 등)은 원문 글자다. */
+function calloutPartHtml(part) {
+  if (part.type === 'paragraph' || part.type === 'text') return inlineHtml(part.tokens ?? [{ type: 'text', text: part.text }])
+  if (part.type === 'list') return nestedListHtml(part)
+  return isCommentBlock(part) ? '' : escapeText(part.raw ?? '').trim()
+}
+
+/** 인용문 → 콜아웃. 종류 낱말이 없으면 note 다. 블록이 여럿이면 줄을 바꿔 잇는다. 첫 블록이 문단이 아니어도 내용을 버리지 않는다. */
 function calloutBlock(token, context) {
-  const paragraphs = (token.tokens ?? []).filter((part) => part.type !== 'space')
-  const firstTokens = paragraphs[0]?.tokens ?? []
-  const { kind, rest } = calloutKind(firstTokens, context.kindNames)
-  const bodies = [inlineHtml(rest), ...paragraphs.slice(1).map((part) => (part.tokens ? inlineHtml(part.tokens) : escapeText(part.raw ?? '').trim()))]
-  return { t: 'callout', kind: kind ?? 'note', html: bodies.filter(Boolean).join('<br>') }
+  const [first, ...others] = (token.tokens ?? []).filter((part) => part.type !== 'space')
+  const lead = first?.type === 'paragraph' ? calloutKind(first.tokens, context.kindNames) : null
+  const firstHtml = lead ? inlineHtml(lead.rest) : first ? calloutPartHtml(first) : ''
+  const bodies = [firstHtml, ...others.map(calloutPartHtml)]
+  return { t: 'callout', kind: lead?.kind ?? 'note', html: bodies.filter(Boolean).join('<br>') }
 }
 
 function paragraphBlock(token, context) {

@@ -59,9 +59,23 @@ describe('book 모드', () => {
   })
   test('개정 이력은 목록 또는 { revisions, … } 객체를 받는다', () => {
     assert.deepEqual(docInfoFrom([['1.0', '2026-01-01', 'a', 'b']]), { revisions: [['1.0', '2026-01-01', 'a', 'b']] })
-    const info = { revisions: [], readers: ['운영 담당자'] }
-    assert.equal(docInfoFrom(info), info)
+    assert.deepEqual(docInfoFrom({ revisions: [], readers: ['운영 담당자'] }), { revisions: [], readers: ['운영 담당자'] })
     assert.throws(() => docInfoFrom({ readers: [] }), /revisions/)
+  })
+  test('개정 이력의 글은 Markdown 인라인으로 읽는다. 작성자가 쓴 HTML 은 글자로 보이고 꼴이 틀린 행은 오류다', () => {
+    const info = docInfoFrom({
+      revisions: [['1.0', '2026-01-01', '**굵게** <img src=x onerror=alert(1)>', 'b']],
+      readers: ['<script>x</script>'],
+      related: [['D-1', '안내서', '`code` 참고']],
+      contact: [['문의', '[메일](mailto:a@example.com)']],
+    })
+    assert.equal(info.revisions[0][2], '<strong>굵게</strong> &lt;img src=x onerror=alert(1)&gt;')
+    assert.equal(info.readers[0], '&lt;script&gt;x&lt;/script&gt;')
+    assert.equal(info.related[0][2], '<code>code</code> 참고')
+    assert.equal(info.contact[0][1], '<a href="mailto:a@example.com">메일</a>')
+    assert.throws(() => docInfoFrom([['1.0', '2026-01-01', 'a']]), /rows of strings/)
+    assert.throws(() => docInfoFrom([['1.0', '2026-01-01', { html: 'x' }, 'b']]), /rows of strings/)
+    assert.throws(() => docInfoFrom({ revisions: [], contact: [['a']] }), /contact/)
   })
   test('콜아웃 이름: 언어 묶음의 표시 낱말과 설정에 더한 종류', () => {
     const settings = variantSettings('plain', { theme: { callouts: { tip: 'green' } } })
