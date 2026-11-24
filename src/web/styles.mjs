@@ -8,7 +8,7 @@
 import { INK, INK2, INK3, LINE, LINE2, PAPER, SURF } from '../theme/index.mjs'
 
 /** 어두운 테마의 색. 글자 대비는 밝은 테마와 같은 단계(진함 · 보통 · 흐림)를 지킨다. */
-const DARK = Object.freeze({ ink: '#e8eaee', ink2: '#c3c8d1', ink3: '#959dab', line: '#3a404b', line2: '#2c313a', paper: '#16191f', surf: '#20242c' })
+const DARK = Object.freeze({ ink: '#e8eaee', ink2: '#c3c8d1', ink3: '#959dab', line: '#3a404b', line2: '#2c313a', paper: '#15181e', surf: '#20242c' })
 
 function colorTokens(accent) {
   const light = `--ink:${INK};--ink2:${INK2};--ink3:${INK3};--line:${LINE};--line2:${LINE2};--paper:${PAPER};--surf:${SURF};--accent:${accent}`

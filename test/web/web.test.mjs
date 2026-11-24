@@ -44,7 +44,7 @@ describe('웹판 HTML', () => {
     const english = renderWebHtml(virtualSpec(), { settings: { ...settings, locale: 'en' } })
     assert.match(english, /<html lang="en">/)
     assert.match(english, /<summary>Contents<\/summary>/)
-    assert.match(html, /<summary>목차<\/summary>/)
+    assert.match(html, /<summary>차례<\/summary>/)
   })
   test('settings 없이 부르면 오류다', () => {
     assert.throws(() => renderWebHtml(virtualSpec(), {}), /settings is required/)

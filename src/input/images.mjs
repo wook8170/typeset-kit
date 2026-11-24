@@ -8,11 +8,13 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, extname, join, resolve } from 'node:path'
 import { createImageReader } from './image-shrinker.mjs'
+import { isInsideRoot } from '../platform.mjs'
 import { pngDensity, pngHeader } from './png.mjs'
 
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml' }
 
 const dataUri = (mime, bytes) => `data:${mime};base64,${bytes.toString('base64')}`
+const outsideRoot = (shown) => `outside-root: ${shown} is outside the project folder (the folder of the config file)`
 const isRemote = (src) => /^[a-z][a-z0-9+.-]*:\/\//i.test(src)
 
 /** 그림 블록이 파일을 가리키는가(순수 함수). data 주소이거나 이미 svgText 가 있으면 넣을 것이 없다. */
@@ -37,11 +39,15 @@ function pngPixels(file, bytes) {
 }
 
 /** SVG 가 같은 폴더의 그림을 상대 경로로 부르면(<image href="x.png">) data 주소로 바꾼다. 문서에 넣은 SVG 는 원래 폴더를 모른다. */
-async function inlineSvgReferences(svg, dir, reader, problems) {
+async function inlineSvgReferences(svg, dir, { root, reader, problems }) {
   const references = [...new Set([...svg.matchAll(/<image\b[^>]*?\s(?:xlink:)?href="([^":#]+\.(?:png|jpe?g))"/gi)].map((match) => match[1]))]
   let text = svg
   for (const reference of references) {
     const file = join(dir, reference)
+    if (!isInsideRoot(root, file)) {
+      problems.push(outsideRoot(`${reference} referenced by an SVG figure`))
+      continue
+    }
     if (!existsSync(file)) {
       problems.push(`missing-file: ${reference} referenced by an SVG figure`)
       continue
@@ -52,10 +58,16 @@ async function inlineSvgReferences(svg, dir, reader, problems) {
   return text
 }
 
+/** 파일 하나의 문제(없으면 null). 프로젝트 폴더 밖이면 있든 없든 outside-root 다(있는지 알려 주지 않는다). */
+function fileProblem(root, file, shown) {
+  if (!isInsideRoot(root, file)) return outsideRoot(shown)
+  return existsSync(file) ? null : `missing-file: ${shown}`
+}
+
 async function inlineFigure(block, { root, reader, problems }) {
   const kind = classifyFigure(block)
   const file = kind.problem ? null : resolve(root, block.src)
-  const problem = kind.problem ?? (existsSync(file) ? null : `missing-file: ${block.src}`)
+  const problem = kind.problem ?? fileProblem(root, file, block.src)
   if (problem) {
     problems.push(problem)
     return block
@@ -63,7 +75,7 @@ async function inlineFigure(block, { root, reader, problems }) {
   if (kind.kind === 'svg') {
     const svg = (await readFile(file, 'utf8')).replace(/^﻿?<\?xml[^>]*>\s*/, '').trim()
     const { src, ...rest } = block
-    return { ...rest, svgText: await inlineSvgReferences(svg, dirname(file), reader, problems) }
+    return { ...rest, svgText: await inlineSvgReferences(svg, dirname(file), { root, reader, problems }) }
   }
   const original = kind.mime === MIME['.png'] ? await readFile(file) : null
   const px = block.px ?? (original ? pngPixels(file, original) : null)
@@ -87,7 +99,7 @@ async function mapFigures(spec, convert) {
 /**
  * 명세의 그림 파일을 문서 안에 넣은 새 명세를 만든다. options = { root, limits: { imageMaxPx }, cdp }.
  * cdp 가 없으면(인쇄판 HTML · 웹판만 낼 때) 줄이지 않고 넣는다.
- * 돌려주는 값 = { spec, problems } — problems 는 「missing-file: …」 문자열 목록이다. 문제가 있어도 나머지 그림은 넣는다.
+ * 돌려주는 값 = { spec, problems } — problems 는 「missing-file: …」 · 「outside-root: …」 문자열 목록이다. 문제가 있어도 나머지 그림은 넣는다.
  */
 export async function inlineSpecImages(spec, { root, limits = {}, cdp = null } = {}) {
   const reader = await createImageReader({ cdp, maxPx: limits.imageMaxPx ?? 0 })

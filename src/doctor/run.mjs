@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { browserVersion, withChrome } from '../browser/chrome.mjs'
 import { findBrowser } from '../browser/find.mjs'
-import { openDocument } from '../browser/print.mjs'
+import { closeTab, openDocument } from '../browser/print.mjs'
 import { ConfigError, findConfigFile, loadConfig } from '../config/load.mjs'
 import { validateConfig } from '../config/validate.mjs'
 import { isFile } from '../platform.mjs'
@@ -37,7 +37,7 @@ async function probeOutline(cdp) {
     const { data } = await call('Page.printToPDF', { generateDocumentOutline: true, preferCSSPageSize: true })
     return Buffer.from(data, 'base64').includes('/Outlines')
   } finally {
-    await cdp.send('Target.closeTarget', { targetId })
+    await closeTab(cdp, targetId)
   }
 }
 

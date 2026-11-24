@@ -1,0 +1,96 @@
+# CI — runs the unit and browser tests, the package check, and an install-to-PDF run of the packed tarball on Linux, macOS and Windows.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The Windows runner's git converts line endings by default. The repository pins LF in .gitattributes; this keeps it so before checkout.
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Ubuntu 24.04 blocks unprivileged user namespaces, which the Chrome sandbox needs. Lifting the restriction keeps the sandbox on.
+      - name: Allow the Chrome sandbox (Linux)
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Install dependencies
+        run: npm ci
+      # doctor fails when no browser is found. Without this step the browser tests would skip and the job would still pass.
+      - name: Check the build environment
+        run: node bin/typeset-kit.mjs doctor
+      - name: Tests
+        run: node --test "test/**/*.test.mjs"
+      - name: Rule file hashes
+        run: node scripts/check-rules-hash.mjs
+      # The exposure scan needs a denylist outside the repository. The real list is not in CI, so a placeholder rule proves only that the file is read.
+      - name: Package check
+        run: |
+          echo 'typeset-kit-ci-placeholder-[0-9]{12}' > "$RUNNER_TEMP/denylist.txt"
+          TYPESET_KIT_DENYLIST="$RUNNER_TEMP/denylist.txt" node scripts/check-pack.mjs
+      - name: Pack the tarball
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          echo "TARBALL=$(ls "$RUNNER_TEMP"/typeset-kit-*.tgz)" >> "$GITHUB_ENV"
+      # Each example runs from the installed tarball, as a user would: init, build the PDF and the web edition, then check the PDF and the writing. With no baseline file, `check-writing --check` fails on any finding.
+      - name: Examples from the installed package (Korean, English)
+        run: |
+          for locale in ko en; do
+            project="$RUNNER_TEMP/example-$locale"
+            mkdir -p "$project" && cd "$project"
+            npm init -y > /dev/null
+            npm install --no-audit --no-fund "$TARBALL"
+            npx typeset-kit init --locale "$locale"
+            npx typeset-kit build --pdf --web
+            npx typeset-kit check --require-toc typeset-out/guide.pdf
+            npx typeset-kit check-writing --check
+            test -s typeset-out/guide.web.html
+          done
+      - name: Report example from the installed package (tables and figures)
+        run: |
+          project="$RUNNER_TEMP/example-report"
+          mkdir -p "$project" && cd "$project"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$TARBALL"
+          cp -R node_modules/typeset-kit/examples/report/. .
+          npx typeset-kit build --pdf --web
+          npx typeset-kit check --require-toc typeset-out/report.pdf
+          npx typeset-kit check-writing --check
+      # A page that overflows must fail the build. The run below must exit with 1 and name the overflow.
+      - name: An overflowing page fails the build
+        run: |
+          cd "$RUNNER_TEMP/example-ko"
+          node -e "
+            const fs = require('node:fs')
+            const rows = Array.from({ length: 90 }, (_, i) => 'line ' + i).join('\n')
+            fs.appendFileSync('docs/guide.md', '\n\n## Overflow\n\nOne code block taller than a page.\n\n### Block\n\n\`\`\`text\n' + rows + '\n\`\`\`\n')
+          "
+          if npx typeset-kit build --pdf > overflow.log 2>&1; then cat overflow.log; echo 'expected the build to fail'; exit 1; fi
+          grep -q 'overflow' overflow.log
+      - name: Upload the built examples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typeset-kit-examples-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/example-*/typeset-out/
+          if-no-files-found: ignore

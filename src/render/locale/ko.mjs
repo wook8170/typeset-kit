@@ -24,9 +24,8 @@ export default Object.freeze({
   relatedHead: ['문서번호', '문서명', '이 문서와의 관계'],
   contact: '문의처',
   tocEyebrow: 'CONTENTS',
-  tocTitle: '목차',
-  // pages 모드가 앞에 붙이는 차례 면의 제목
-  pagesTocTitle: '차례',
+  // 인쇄판 차례 쪽 · 웹판 차례 · pages 모드가 앞에 붙이는 차례 면이 함께 쓰는 제목
+  tocTitle: '차례',
   chapterSections: '이 장의 절',
   chapterSectionCount: (count) => `이 장의 절 ${count}개는 차례에서 볼 수 있다.`,
   callouts: { note: '참고', caution: '주의', warning: '경고' },

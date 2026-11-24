@@ -57,7 +57,8 @@ function measureColumn({ head, rows, index, columnCount, limits }) {
     for (const word of wordsOf(html)) longestWord = Math.max(longestWord, textWidth(word))
   }
   const average = widths.length ? sum(widths) / widths.length : 0
-  const longest = widths.length ? Math.max(...widths) : 0
+  // 행이 아주 많은 표에서 펼침(...) 인자는 인자 수 상한에 걸린다. 그래서 하나씩 견준다.
+  const longest = widths.reduce((max, width) => Math.max(max, width), 0)
   const hard = Math.max(toPx(Math.min(longestWord, WORD_CAP)), limits.tableWidth * limits.min)
   const soft = Math.max(hard, toPx(shortMax))
   return {

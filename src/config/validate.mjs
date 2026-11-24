@@ -3,7 +3,8 @@
 // 먼저 읽을 파일: config/schema.mjs(받는 키와 기본값).
 import { CONFIG_SCHEMA, MODE_ONLY_KEYS } from './schema.mjs'
 
-const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+/** 중괄호로 쓴 객체인가. Date · Map 같은 다른 객체는 설정의 묶음 자리에 올 수 없다. */
+const isPlainObject = (value) => value !== null && typeof value === 'object' && [Object.prototype, null].includes(Object.getPrototypeOf(value))
 const joinPath = (path, key) => (path ? `${path}.${key}` : String(key))
 const describe = (value) => (typeof value === 'function' ? 'function' : (JSON.stringify(value)?.slice(0, 60) ?? String(value)))
 
@@ -144,6 +145,32 @@ export function findDuplicateIds(documents) {
   })
 }
 
+/** 출력 파일 이름(out, 없으면 id)도 겹치지 않아야 한다. 겹치면 뒤 문서가 앞 문서의 파일을 덮어쓴다. Windows 는 대소문자를 가리지 않으므로 소문자로 견준다. */
+export function findDuplicateOutputs(documents) {
+  const seen = new Set()
+  return documents.flatMap((document, index) => {
+    const name = String(document.out || document.id).toLowerCase()
+    if (!seen.has(name)) {
+      seen.add(name)
+      return []
+    }
+    return [{ path: `documents.${index}.out`, code: 'duplicate-out', got: name }]
+  })
+}
+
+const RESERVED_NAME = /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i
+
+/**
+ * 출력 이름으로 쓸 수 없는 꼴. 점 · 공백으로 끝나는 이름과 장치 이름은 Windows 에서 다른 파일이 되고,
+ * `.web` 으로 끝나는 이름은 인쇄판(`이름.html`)이 다른 문서의 웹판(`이름.web.html`)과 겹친다.
+ */
+export function findBadOutputNames(documents) {
+  return documents.flatMap((document, index) => {
+    const isBad = /[. ]$/.test(document.out) || /\.web$/i.test(document.out) || RESERVED_NAME.test(document.out)
+    return isBad ? [{ path: `documents.${index}.out`, code: 'no-match', expected: 'a file name that does not end with ".", " " or ".web" and is not a device name', got: document.out }] : []
+  })
+}
+
 /** 한 모드에서만 뜻이 있는 키를 다른 모드 문서에 쓰면 문제다. raw 는 기본값을 채우기 전의 문서다. */
 export function findModeMismatches(rawDocuments) {
   return rawDocuments.flatMap((document, index) =>
@@ -156,8 +183,12 @@ export function findModeMismatches(rawDocuments) {
 /** 순수 판정. 읽은 값을 스키마에 견주어, 기본값을 채운 설정과 문제 목록을 돌려준다. */
 export function validateConfig(raw) {
   const problems = []
-  const config = resolveNode(CONFIG_SCHEMA, raw, '', problems)
+  // 값이 아예 없으면(.mjs 설정에 기본 내보내기가 없는 경우) 기본값만으로 통과하지 않게 객체가 아닌 값으로 다룬다.
+  const config = resolveNode(CONFIG_SCHEMA, raw ?? null, '', problems)
   const rawDocuments = Array.isArray(raw?.documents) ? raw.documents : []
-  problems.push(...findDuplicateIds(config.documents), ...findModeMismatches(rawDocuments))
+  const duplicateIds = findDuplicateIds(config.documents)
+  // id 가 겹친 문서는 출력 이름도 겹친다. 같은 실수를 두 번 알리지 않는다.
+  const duplicateOutputs = duplicateIds.length ? [] : findDuplicateOutputs(config.documents)
+  problems.push(...duplicateIds, ...duplicateOutputs, ...findBadOutputNames(config.documents), ...findModeMismatches(rawDocuments))
   return { config, problems }
 }

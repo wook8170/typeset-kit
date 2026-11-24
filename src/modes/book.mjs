@@ -5,6 +5,7 @@
 import { existsSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import { mergeParts, parseMarkdown } from '../input/markdown.mjs'
+import { inlineMarkdown } from '../input/markdown-inline.mjs'
 import { readTextFile, toPosixPath } from '../platform.mjs'
 import { localeWords } from '../render/locale/index.mjs'
 import { buildSpec } from './spec.mjs'
@@ -17,15 +18,36 @@ function emptyReport(document, problems) {
   }
 }
 
+const isTextRow = (row, length) => Array.isArray(row) && row.length === length && row.every((cell) => typeof cell === 'string')
+const isRowList = (rows, length) => Array.isArray(rows) && rows.every((row) => isTextRow(row, length))
+
+/** 문서 정보 묶음의 꼴 위반(순수 함수). 없으면 null, 있으면 영어 설명 한 줄이다. */
+export function docInfoProblem(info) {
+  if (!isRowList(info.revisions, 4)) return 'revisions must be a list of [version, date, change, author] rows of strings'
+  if (info.readers !== undefined && !isTextRow(info.readers, info.readers?.length)) return 'readers must be a list of strings'
+  if (info.related !== undefined && !isRowList(info.related, 3)) return 'related must be a list of [number, name, relation] rows of strings'
+  if (info.contact !== undefined && !isRowList(info.contact, 2)) return 'contact must be a list of [label, value] rows of strings'
+  return null
+}
+
 /**
  * 개정 이력 JSON → 문서 정보(계약 4.1절 docInfo). 두 꼴을 받는다.
  *   - 목록: [[버전, YYYY-MM-DD, 변경 내용, 작성], …] → { revisions }
- *   - 객체: { revisions, readers, related, contact } 그대로
+ *   - 객체: { revisions, readers, related, contact }
+ * 렌더가 마크업으로 넣는 칸(변경 내용 · 독자 · 관계 · 문의 값)은 Markdown 인라인 문법으로 읽는다.
+ * book 모드의 글은 원고든 옆 파일이든 같은 규칙으로 읽기 위해서다(작성자가 쓴 HTML 은 글자로 보인다).
  */
 export function docInfoFrom(value) {
-  if (Array.isArray(value)) return { revisions: value }
-  if (value && typeof value === 'object' && Array.isArray(value.revisions)) return value
-  throw new Error('revisions file must be a list of [version, date, change, author] rows or an object with a revisions list')
+  const info = Array.isArray(value) ? { revisions: value } : value
+  if (!info || typeof info !== 'object') throw new Error('revisions file must be a list of rows or an object with a revisions list')
+  const problem = docInfoProblem(info)
+  if (problem) throw new Error(`revisions file: ${problem}`)
+  return {
+    revisions: info.revisions.map(([version, date, change, author]) => [version, date, inlineMarkdown(change), author]),
+    ...(info.readers ? { readers: info.readers.map(inlineMarkdown) } : {}),
+    ...(info.related ? { related: info.related.map(([number, name, relation]) => [number, name, inlineMarkdown(relation)]) } : {}),
+    ...(info.contact ? { contact: info.contact.map(([label, contactValue]) => [label, inlineMarkdown(contactValue)]) } : {}),
+  }
 }
 
 /** 콜아웃 종류 → 인용문 첫 낱말로 쓸 수 있는 이름. 언어 묶음의 표시 낱말과 설정에 더한 종류의 키다. */

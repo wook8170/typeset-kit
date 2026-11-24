@@ -2,6 +2,8 @@
 // 부르는 곳: browser/index.mjs(공개 진입점), 조판 모드(modes/*), doctor/checks.mjs(책갈피 점검).
 // 먼저 읽을 파일: docs/contract.md 「쪽 나누기 스크립트가 알리는 값」(기다리는 창 변수의 뜻).
 
+import { CdpError } from './cdp.mjs'
+
 /** 문서를 넣는 CDP 명령 하나에 싣는 글자 수. 100MB 를 넘는 문서를 한 명령에 실으면 답이 오지 않았다. */
 export const WRITE_CHUNK = 4 * 1024 * 1024
 /** PDF 를 스트림에서 한 번에 읽는 바이트 수. 수 MB 를 한 웹소켓 프레임으로 받으면 답이 오지 않는다. */
@@ -10,7 +12,20 @@ export const READ_CHUNK = 512 * 1024
 export const INITIAL_WAIT_MS = 60000
 /** 스크립트의 시간 상한에 더하는 여유. 글꼴 준비와 문서 읽기에 드는 시간이다. */
 export const WAIT_MARGIN_MS = 35000
+/** 브라우저 명령 하나(상태 묻기 · 글꼴 기다리기)의 답을 기다리는 상한. 문서 스크립트가 끝나지 않으면 답이 오지 않는다. */
+export const CALL_TIMEOUT_MS = 60000
+/** PDF 굽기 명령의 답을 기다리는 상한. */
+export const PRINT_TIMEOUT_MS = 300000
 const POLL_MS = 200
+
+/** 약속이 ms 안에 끝나지 않으면 실패로 끝낸다. 브라우저가 답하지 않을 때 조판이 멈춰 있지 않게 하기 위해서다. */
+export function withinTime(promise, ms, what) {
+  let timer
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what} did not answer within ${Math.round(ms / 1000)}s`)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
 
 /** printToPDF 인자. 여백은 문서 CSS 가 갖는다. 책갈피(generateDocumentOutline)는 장 · 절 제목에서 만든다. */
 export const PRINT_PARAMS = Object.freeze({
@@ -56,10 +71,11 @@ export function waitDeadline({ startedAt, fixedLimitMs, reportedLimitMs }) {
 async function waitForTypeset(call, { startedAt, fixedLimitMs }) {
   let reportedLimitMs = 0
   for (;;) {
-    const answer = await call('Runtime.evaluate', {
+    const asked = call('Runtime.evaluate', {
       expression: "window.__paged === true ? 'done' : (window.__typesetLimitMs || 0)",
       returnByValue: true,
     })
+    const answer = await withinTime(asked, CALL_TIMEOUT_MS, 'Typesetting page')
     const value = answer.result.value
     if (value === 'done') return
     if (value > 0) reportedLimitMs = value
@@ -93,6 +109,15 @@ async function readStream(call, handle) {
   return Buffer.concat(chunks)
 }
 
+/** 탭을 닫는다. 연결이 이미 끊겼으면 닫을 탭도 없으므로 넘어간다. 그 실패가 원래 오류를 가리지 않게 하기 위해서다(브라우저는 withChrome 이 끝낸다). */
+export async function closeTab(cdp, targetId) {
+  try {
+    await cdp.send('Target.closeTarget', { targetId })
+  } catch (error) {
+    if (!(error instanceof CdpError)) throw error
+  }
+}
+
 /**
  * 조판 HTML 한 벌을 PDF 로 굽는다. 새 탭을 열고, 문서를 넣고, 쪽 나누기 스크립트가 끝나면 굽고, 탭을 닫는다.
  * options.timeoutMs 는 스크립트 시간 상한을 직접 정한다(0 이면 스크립트가 문서 크기에 비례해 정한다).
@@ -108,11 +133,11 @@ export async function printPdf(cdp, html, { timeoutMs = 0 } = {}) {
     const startedAt = Date.now()
     await openDocument(call, html, timeoutMs)
     await waitForTypeset(call, { startedAt, fixedLimitMs: timeoutMs })
-    await call('Runtime.evaluate', { expression: 'document.fonts.ready', awaitPromise: true })
+    await withinTime(call('Runtime.evaluate', { expression: 'document.fonts.ready', awaitPromise: true }), CALL_TIMEOUT_MS, 'Font loading')
     const meta = await readTypesetMeta(call)
-    const { stream } = await call('Page.printToPDF', { ...PRINT_PARAMS })
+    const { stream } = await withinTime(call('Page.printToPDF', { ...PRINT_PARAMS }), PRINT_TIMEOUT_MS, 'PDF printing')
     return { pdf: await readStream(call, stream), meta }
   } finally {
-    await cdp.send('Target.closeTarget', { targetId })
+    await closeTab(cdp, targetId)
   }
 }

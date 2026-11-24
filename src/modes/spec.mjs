@@ -2,7 +2,7 @@
 // 부르는 곳: build/index.mjs(문서마다 buildDocument(job)), modes/book.mjs(Markdown 을 명세로 바꾼 뒤 buildSpec 을 부른다).
 // 먼저 읽을 파일: docs/contract.md 「모드 모듈 계약」, render/index.mjs(renderPrintHtml).
 //
-// 다른 레인이 만드는 단계(글꼴 CSS · 그림 넣기 · PDF 후처리 · 웹판)는 쓸 때만 불러온다. deps 로 바꿔 넣을 수 있다(테스트용).
+// 다른 단계(글꼴 CSS · 그림 넣기 · PDF 후처리 · 웹판)는 쓸 때만 불러온다. deps 로 바꿔 넣을 수 있다(테스트용).
 
 import { rm, writeFile } from 'node:fs/promises'
 import { extname, join, relative, resolve } from 'node:path'
@@ -70,6 +70,25 @@ export function findSvgProblems(spec, logoSvg) {
   )
   const logoProblem = logoSvg ? svgProblem(logoSvg) : null
   if (logoProblem) problems.push(`svg-guard: brand.logo: ${logoProblem}`)
+  return problems
+}
+
+const IMAGE_DATA = /^data:image\/(?:png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/]+=*$/
+
+/**
+ * 그림 주소의 꼴 위반. 그림 넣기를 거친 뒤의 src 는 그림 data 주소여야 한다.
+ * 원고에 직접 쓴 data 주소는 그림 넣기를 거치지 않는다. 그래서 여기서 꼴을 보고, 다른 내용이 든 주소는 문서에 싣지 않는다.
+ */
+export function findImageProblems(spec) {
+  const problems = []
+  spec.chapters.forEach((chapter, ci) =>
+    chapter.sections.forEach((section, si) =>
+      section.blocks.forEach((block, bi) => {
+        const isBad = block.t === 'figure' && !block.svgText && !IMAGE_DATA.test(block.src ?? '')
+        if (isBad) problems.push(`bad-image: chapters.${ci}.sections.${si}.blocks.${bi}: src must be an image file or a base64 image data address`)
+      }),
+    ),
+  )
   return problems
 }
 
@@ -160,6 +179,8 @@ export async function buildSpec(job, sourceSpec, deps = {}) {
   const spec = inlined.spec
   const logo = await readLogo(root, settings.brand.logo)
   const assetProblems = [...inlined.problems, ...(logo.missing ? [logo.missing] : []), ...findSvgProblems(spec, logo.logoSvg)]
+  // 그림 파일 문제가 이미 있으면 같은 그림을 두 번 알리지 않는다.
+  if (inlined.problems.length === 0) assetProblems.push(...findImageProblems(spec))
   if (assetProblems.length) return { ...report, problems: assetProblems }
 
   const families = fontFamilies(settings.theme.fonts, await use.builtinFonts())

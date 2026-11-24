@@ -53,7 +53,7 @@ function judge(info, options, maxMb) {
     ...checkPageMode(info),
     ...checkBookmarks(info, options),
     ...checkLinks(info),
-    ...checkToc(toc),
+    ...checkToc(toc, options),
     ...checkPageLabels(info, toc),
     ...checkFonts(info, options),
     ...checkSize(info, maxMb),
@@ -81,7 +81,7 @@ async function checkOne(path, options, maxMb) {
 
 /**
  * PDF 파일들을 검사한다. 돌려주는 값 = { results, hasProblems }.
- * options = { cwd, configFile, maxMb, tocTitles, maxOutlineDepth, allowType3 }. 모두 고르는 값이다.
+ * options = { cwd, configFile, maxMb, tocTitles, maxOutlineDepth, allowType3, requireToc }. 모두 고르는 값이다.
  */
 export async function checkPdfs(paths, options = {}) {
   const resolved = { cwd: process.cwd(), ...options }

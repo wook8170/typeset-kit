@@ -22,6 +22,9 @@ export const COMMANDS = {
   init: initCommand,
 }
 
+/** 입력(원고 · 책 명세 · 검사 대상)이 틀려서 나는 오류의 이름. 단계 모듈을 미리 불러오지 않으려고 이름으로 견준다. */
+const INPUT_ERROR_NAMES = new Set(['SpecError', 'MarkdownError', 'WritingCheckError'])
+
 const COMMON_OPTIONS = { config: { type: 'string' }, help: { type: 'boolean', short: 'h' } }
 
 function formatConfigError(error, messages) {
@@ -38,6 +41,8 @@ export function describeError(error, messages) {
   if (error instanceof NotImplementedError) return { code: EXIT.usage, text: messages.notImplemented(error.feature) }
   if (error instanceof UnknownDocumentError) return { code: EXIT.usage, text: error.message }
   if (error instanceof BrowserNotFoundError) return { code: EXIT.failed, text: error.message }
+  // 원고 · 명세 · 검사 대상의 문제는 사용자가 고칠 것이다. 스택 없이 문구만 보인다.
+  if (INPUT_ERROR_NAMES.has(error?.name)) return { code: EXIT.failed, text: error.message }
   if (error?.code?.startsWith?.('ERR_PARSE_ARGS')) return { code: EXIT.usage, text: messages.badArguments(error.message) }
   return null
 }

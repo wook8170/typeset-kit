@@ -9,6 +9,8 @@ import { contAttr } from './landscape.mjs'
 import { contentColWidths, isLandTable, LAND_TABLE_W } from './table-widths.mjs'
 
 export const escapeHtml = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+/** 따옴표로 감싼 속성 값에 넣을 글. 따옴표까지 바꿔야 값이 속성 밖으로 나가지 못한다. */
+export const escapeAttr = (value) => escapeHtml(value).replace(/"/g, '&quot;')
 
 /** 정의 목록의 이름 칸. 이스케이프한 뒤 굵게 · 코드 · 기울임 태그와 이미 적힌 문자 참조만 되살린다. */
 const inlineKey = (value) =>
@@ -37,7 +39,7 @@ function stepsBlock(block) {
       return `<li>${item.html}${code}${note}</li>`
     })
     .join('')
-  return `${blockLabel(block.label)}<ol class="bsteps"${block.start ? ` start="${block.start}"` : ''}>${items}</ol>`
+  return `${blockLabel(block.label)}<ol class="bsteps"${block.start ? ` start="${Number(block.start)}"` : ''}>${items}</ol>`
 }
 
 function calloutBlock(block, format) {
@@ -77,7 +79,7 @@ function figImage(block) {
   const css = [block.px?.w ? `width:${Number(block.px.w)}px;object-fit:contain` : '', block.maxh ? `max-height:${Number(block.maxh)}px` : '']
     .filter(Boolean)
     .join(';')
-  const img = `<img src="${block.src}" alt="${escapeHtml(block.alt || '')}"${css ? ` style="${css}"` : ''}>`
+  const img = `<img src="${escapeAttr(block.src)}" alt="${escapeAttr(block.alt || '')}"${css ? ` style="${css}"` : ''}>`
   if (!block.marks || !block.marks.length) return img
   const marks = block.marks
     .map((mark) => `<span class="bmark" style="left:${Number(mark.x)}%;top:${Number(mark.y)}%">${escapeHtml(mark.n)}</span>`)
@@ -100,7 +102,7 @@ function cell(value, tag) {
   const classes = [value.mono ? 'cmono' : '', value.strong ? 'cstrong' : '', value.align === 'center' ? 'ccenter' : '']
     .filter(Boolean)
     .join(' ')
-  return `<${tag}${value.span ? ` colspan="${value.span}"` : ''}${classes ? ` class="${classes}"` : ''}>${value.html}</${tag}>`
+  return `<${tag}${value.span ? ` colspan="${Number(value.span)}"` : ''}${classes ? ` class="${classes}"` : ''}>${value.html}</${tag}>`
 }
 
 /** 표 열 폭. 표의 widths 가 먼저고, 없으면 typeset.tableColWidths 가 content 일 때만 내용 길이로 잰다. */
@@ -126,7 +128,7 @@ function tableBlock(block, format) {
   // compact = 작은 예시 표. 줄 간격을 줄이고 폭을 열 수에 맞춘다.
   const tableClass = block.compact ? 'btbl bcompact' : 'btbl'
   const tableStyle = block.compact ? ` style="width:${Math.min(100, (block.head ? block.head.length : 2) * 20)}%"` : ''
-  const cont = isLand || format.isLandBook ? contAttr(block, format.words, escapeHtml) : ''
+  const cont = isLand || format.isLandBook ? contAttr(block, format.words, escapeAttr) : ''
   return `<div class="btblwrap"${land}${cont}><table class="${tableClass}"${tableStyle}>${cols}${head}<tbody>${rows}</tbody></table></div>${caption}`
 }
 

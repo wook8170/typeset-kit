@@ -32,12 +32,14 @@ Output goes to `typeset-out/`.
 | `guide.web.html` | Web edition: side contents, a collapsible contents list on narrow screens, light and dark themes, no scripts |
 | `typeset-report.json` | Per document: pages, front pages, overflowing pages, bookmarks, links and size |
 
+The `examples/` folder of the package holds three examples: `ko` is a short guide, `en` is an English document (`init` copies one of these two), and `report` is a report with many tables and figures. To build `report`, copy the folder and run `build` inside it.
+
 ## Commands
 
 | Command | What it does | Exit code |
 |---|---|---|
 | `build [id…]` | Builds the documents in the config. Pick outputs with `--pdf`, `--web`, `--html-only`; with none, PDF and print HTML | 1 on overflowing pages, size limit, missing files or SVG allow-list violations (`--allow-overflow` accepts overflow) |
-| `check <pdf…>` | Contents lines = bookmarks, link targets, bookmark depth, page labels, bookmark pane, Type 3 fonts, size | 1 if a check fails |
+| `check <pdf…>` | Contents lines = bookmarks, link targets, bookmark depth, page labels, bookmark pane, Type 3 fonts, size. `--require-toc` also fails a PDF that has no contents | 1 if a check fails |
 | `check-writing` | Writing rules. `--check` compares with the baseline, `--update-baseline` locks it again | 1 if a cell grows |
 | `doctor` | Checks the build environment | 1 if a build cannot run |
 | `init` | Sample config and manuscript | 1 if files exist (`--force` overwrites) |
@@ -57,7 +59,7 @@ Argument and config errors exit with 2. Messages are in Korean when `TYPESET_KIT
 - `#` is the document title, `##` a chapter, `###` a section, `####` a subheading. Chapters and sections go into the contents and bookmarks, and are numbered for you.
 - Paragraphs between `#` and the first `##` become the cover summary; the first paragraph under a `##` becomes the chapter summary.
 - A quote whose first word is bold becomes a callout: `> **Caution** …`. Kinds are Note, Caution and Warning (참고 · 주의 · 경고 in Korean documents).
-- A paragraph holding only an image becomes a figure: `![Caption](figures/a.svg)`. SVG goes into the document as it is, so its text uses the embedded fonts. PNGs whose long side is over `limits.imageMaxPx` (2000 by default) are scaled down. Remote images are refused.
+- A paragraph holding only an image becomes a figure: `![Caption](figures/a.svg)`. SVG goes into the document as it is, so its text uses the embedded fonts. PNGs whose long side is over `limits.imageMaxPx` (2000 by default) are scaled down. Remote images and files outside the project folder (the folder of the config file) are refused.
 - Tables use the GFM syntax and code uses fenced blocks. A code block inside a numbered item appears under that item.
 - HTML written in the manuscript shows as text. Only `http`, `https`, `mailto` and `#` links stay clickable.
 

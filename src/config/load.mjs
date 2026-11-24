@@ -38,6 +38,8 @@ async function readRawConfig(file) {
     }
   }
   const loaded = await import(toImportUrl(file))
+  // 기본 내보내기가 없으면 설정이 통째로 빈 것으로 읽힌다. 이름 붙인 내보내기만 쓴 실수를 여기서 알린다.
+  if (loaded.default === undefined) throw new ConfigError([{ path: file, code: 'missing-default-export', expected: 'export default { … }' }], file)
   return loaded.default
 }
 

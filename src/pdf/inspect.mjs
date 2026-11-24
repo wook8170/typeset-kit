@@ -15,8 +15,11 @@ function readOutline(doc, resolver) {
   const root = doc.catalog.lookupMaybe(name('Outlines'), PDFDict)
   const first = root?.lookupMaybe(name('First'), PDFDict)
   const items = []
+  // 깨진 PDF 는 책갈피가 자기 자신으로 돌아오기도 한다. 한 번 본 항목을 다시 만나면 거기서 멈춘다.
+  const seen = new Set()
   const walk = (start, depth) => {
-    for (let node = start; node; node = node.lookupMaybe(name('Next'), PDFDict)) {
+    for (let node = start; node && !seen.has(node); node = node.lookupMaybe(name('Next'), PDFDict)) {
+      seen.add(node)
       const target = node.get(name('Dest')) ?? node.lookupMaybe(name('A'), PDFDict)?.get(name('D'))
       items.push({ depth, title: decodeText(node.lookup(name('Title'))), page: resolver.pageOf(target) })
       const child = node.lookupMaybe(name('First'), PDFDict)
@@ -54,7 +57,11 @@ function readLinks(doc, resolver) {
 
 const ROMAN = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']]
 
+/** 로마 숫자로 적을 수 있는 가장 큰 수. 깨진 PDF 가 큰 시작 번호를 주면 그 위는 숫자 그대로 적는다(끝없이 글자를 잇지 않는다). */
+const ROMAN_MAX = 3999
+
 function toRoman(number) {
+  if (!(number >= 1 && number <= ROMAN_MAX)) return String(number)
   let rest = number
   let text = ''
   for (const [value, symbol] of ROMAN) {

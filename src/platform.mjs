@@ -39,6 +39,32 @@ export function isSamePath(left, right, platform = process.platform) {
   return toComparable(left) === toComparable(right)
 }
 
+/**
+ * 실제 경로(심볼릭 링크를 따라간 경로). 아직 없는 파일은 있는 데까지의 윗폴더를 실제 경로로 바꾸고 나머지 이름을 붙인다.
+ * 임시 폴더처럼 윗폴더가 링크인 곳에서, 없는 파일도 있는 파일과 같은 기준으로 견주기 위해서다.
+ */
+function realPathOf(filePath, pathApi) {
+  const missingNames = []
+  for (let current = filePath; ; current = pathApi.dirname(current)) {
+    try {
+      return pathApi.join(realpathSync(current), ...missingNames)
+    } catch (error) {
+      if (!isMissingFileError(error) || pathApi.dirname(current) === current) throw error
+      missingNames.unshift(pathApi.basename(current))
+    }
+  }
+}
+
+/**
+ * 파일이 root 폴더 안에 있는가. 심볼릭 링크를 따라간 실제 경로로 견준다. 그래서 폴더 안의 링크가 폴더 밖 파일을 가리키면 밖이다.
+ * 원고가 가리키는 파일(그림 · 스타일시트)을 읽기 전에 부른다. 원고가 프로젝트 밖 파일을 문서에 싣지 못하게 하기 위해서다.
+ */
+export function isInsideRoot(root, filePath) {
+  const pathApi = pathApiOf()
+  const between = pathApi.relative(realPathOf(pathApi.resolve(root), pathApi), realPathOf(pathApi.resolve(filePath), pathApi))
+  return between !== '..' && !between.startsWith(`..${pathApi.sep}`) && !pathApi.isAbsolute(between)
+}
+
 /** 절대 경로를 `import()` 에 넘길 주소로 바꾼다. Windows 의 `C:\…` 를 그대로 넘기면 가져오기가 실패한다. */
 export const toImportUrl = (absolutePath) => pathToFileURL(absolutePath).href
 

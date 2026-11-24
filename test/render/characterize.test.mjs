@@ -10,7 +10,7 @@ import { paginatorScript, roman } from '../../src/render/paginator.mjs'
 import { svgProblem } from '../../src/render/svg-guard.mjs'
 import { contentColWidths, isLandTable, LAND_TABLE_W } from '../../src/render/table-widths.mjs'
 import {
-  COLUMN_CASES, LAND_CASES, mapWeightsToBuiltin, MESSAGES, normalizeCss, normalizeScript, PAGINATOR_OPTION_SETS, sha256, splitPrintHtml, SVG_CASES,
+  COLUMN_CASES, LAND_CASES, mapWeightsToBuiltin, MESSAGES, normalizeCss, normalizeScript, PAGINATOR_OPTION_SETS, restoreSourceTocTitle, sha256, splitPrintHtml, SVG_CASES,
 } from '../fixtures/characterize.mjs'
 import { VARIANTS, variantSettings, virtualSpec } from '../fixtures/virtual-book.mjs'
 
@@ -18,8 +18,10 @@ const golden = JSON.parse(readFileSync(new URL('../fixtures/source-engine.json',
 
 describe('인쇄판 HTML 이 옮기기 전과 같다', () => {
   for (const name of Object.keys(VARIANTS)) {
-    test(`${name}: 흐름 블록은 바이트까지, 문서 CSS 는 주석 · 공백을 뺀 코드가 같다`, () => {
-      const { flow, css } = splitPrintHtml(renderPrintHtml(virtualSpec(), { settings: variantSettings(name) }))
+    test(`${name}: 흐름 블록은 차례 제목 낱말만 빼고 바이트까지, 문서 CSS 는 주석 · 공백을 뺀 코드가 같다`, () => {
+      const printed = splitPrintHtml(renderPrintHtml(virtualSpec(), { settings: variantSettings(name) }))
+      const { css } = printed
+      const flow = restoreSourceTocTitle(printed.flow, '차례')
       assert.equal(flow.length, golden.variants[name].flowLength)
       assert.equal(sha256(flow), golden.variants[name].flowSha)
       assert.equal(sha256(normalizeCss(css)), golden.variants[name].cssSha)

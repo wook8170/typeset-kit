@@ -116,6 +116,8 @@ export function validateSpec(spec, options = {}) {
   const problems = []
   if (!isText(spec?.title)) problems.push({ path: 'title', code: 'missing-field' })
   if (!Array.isArray(spec?.chapters)) return [...problems, { path: 'chapters', code: 'missing-field' }]
+  // 장이 하나도 없으면 표지만 있는 문서가 된다. 원고를 잘못 가리킨 경우가 대부분이라 문제로 본다.
+  if (spec.chapters.length === 0) problems.push({ path: 'chapters', code: 'empty' })
   spec.chapters.forEach((chapter, index) => problems.push(...checkChapter(chapter, `chapters.${index}`, options)))
   return problems
 }

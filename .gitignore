@@ -2,3 +2,5 @@ node_modules/
 typeset-out/
 *.tgz
 .DS_Store
+.codegraph/
+.codegraph/

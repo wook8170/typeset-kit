@@ -10,6 +10,14 @@ import { knownRuleNames, resolveRuleMode, selectRules } from './rules.mjs'
 import { scanLines } from './scan.mjs'
 import { collectTargets } from './targets.mjs'
 
+/** 글쓰기 검사를 시작할 수 없을 때의 오류(볼 파일 없음 등). 명령은 스택 없이 문구만 보인다. */
+export class WritingCheckError extends Error {
+  constructor(message) {
+    super(message)
+    this.name = 'WritingCheckError'
+  }
+}
+
 async function loadSpec(absolutePath, sourceText) {
   if (absolutePath.endsWith('.json')) return JSON.parse(sourceText)
   const loaded = await import(toImportUrl(absolutePath))
@@ -63,6 +71,8 @@ export async function checkWriting({ root, config, mode = 'report' }) {
   if (writing.languages.length === 0) return empty
   assertKnownRules(writing)
   const targets = collectTargets({ root, config })
+  // 볼 파일이 하나도 없는데 통과로 끝나면 빈 설정을 「문제 없음」으로 읽게 된다.
+  if (targets.length === 0) throw new WritingCheckError('Writing check: no files to check (add documents or writing.globs)')
   const all = await scanTargets({ root, targets, writing })
   const baselinePath = resolve(root, writing.baseline)
   if (mode === 'update-baseline') {

@@ -28,6 +28,8 @@ export function collectTargets({ root, config }) {
     for (const pattern of asList(document.src)) {
       for (const file of filesOfSource(root, pattern)) if (!kinds.has(file)) kinds.set(file, KIND_BY_MODE[document.mode])
     }
+    // 개정 이력 파일의 글도 문서 정보 쪽에 실린다. JSON 이라 책 명세와 같은 방법으로 글을 뽑는다.
+    if (document.revisions) for (const file of filesOfSource(root, document.revisions)) if (!kinds.has(file)) kinds.set(file, 'spec')
   }
   for (const pattern of config.writing?.globs ?? []) {
     for (const file of expandGlob(root, pattern)) if (!kinds.has(file)) kinds.set(file, KIND_BY_EXTENSION[extname(file).toLowerCase()] ?? 'markdown')

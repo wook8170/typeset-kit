@@ -67,7 +67,8 @@ const DOCUMENT = record(
     mode: choice(MODES, 'book'),
     src: oneOf([text(), list(text())], ''),
     title: text(),
-    out: text(),
+    // 출력 파일 이름(확장자 없이). 폴더 구분자 · 점으로 시작하는 이름 · Windows 가 받지 않는 글자는 쓸 수 없다. outDir 밖에 쓰지 않게 하기 위해서다.
+    out: pattern(/^(?:(?!\.)[^\\/:*?"<>|\x00-\x1f]+)?$/),
     revisions: text(),
     theme: partial(THEME),
     cover: partial(COVER),
